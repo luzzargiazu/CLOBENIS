@@ -10,7 +10,7 @@ import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { Audio } from "expo-av";
 
-//  Imagen local dentro de tu carpeta del proyecto
+// Imagen local dentro de tu carpeta del proyecto
 const tennisBallImage = require("../assets/images/pelotatenis.png");
 
 export default function WelcomeScreen() {
@@ -100,7 +100,7 @@ export default function WelcomeScreen() {
     }
 
     setTimeout(() => {
-      router.push("/hom");
+      router.push("/inicio");
     }, 300);
   };
 
@@ -145,7 +145,6 @@ export default function WelcomeScreen() {
           </Animated.View>
         </TouchableWithoutFeedback>
 
-        {/* ✅ Pelota debajo del botón */}
         {showBall && (
           <Animated.Image
             source={tennisBallImage}
