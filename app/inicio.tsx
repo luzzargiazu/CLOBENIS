@@ -56,12 +56,12 @@ export default function InicioScreen() {
       setCurrentNewsIndex((prev) => {
         const nextIndex = (prev + 1) % newsItems.length;
         scrollViewRef.current?.scrollTo({
-          x: nextIndex * (width - 32),
+          x: nextIndex * (width - 15),
           animated: true,
         });
         return nextIndex;
       });
-    }, 30000); // 30 segundos
+    }, 5000); // 30 segundos
 
     return () => clearInterval(interval);
   }, []);
@@ -172,7 +172,7 @@ export default function InicioScreen() {
         return (
           <View style={styles.centerContent}>
             <Text style={styles.comingSoon}>👤</Text>
-            <Text style={styles.comingSoonText}>Tu perfil</Text>
+            <Text style={styles.comingSoonText}>Chatsport</Text>
           </View>
         );
       default:
@@ -314,7 +314,7 @@ export default function InicioScreen() {
               activeTab === "perfil" && styles.tabLabelActive,
             ]}
           >
-            Perfil
+            Chatsport
           </Text>
         </TouchableOpacity>
       </View>
@@ -341,10 +341,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
   },
-  logoImage: {
-    width: 40,
-    height: 40,
-    marginRight: 10,
+  logoImage: {    //tamano 40 a 45
+    width: 45,
+    height: 45,
+    marginRight: 10,  
   },
   greetingText: {
     fontSize: 18,

@@ -22,6 +22,12 @@ export default function WelcomeScreen() {
   const [showBall, setShowBall] = useState(false);
   const bounceSound = useRef(new Audio.Sound());
 
+  // Para el fade in/out del gradiente
+  const gradientOpacity1 = useRef(new Animated.Value(1)).current;
+  const gradientOpacity2 = useRef(new Animated.Value(0)).current;
+  const [currentGradientIndex, setCurrentGradientIndex] = useState(0);
+  const [nextGradientIndex, setNextGradientIndex] = useState(1);
+
   useEffect(() => {
     // Animación inicial
     Animated.parallel([
@@ -53,6 +59,34 @@ export default function WelcomeScreen() {
       bounceSound.current.unloadAsync();
     };
   }, []);
+
+  // Efecto de fade in/out para el gradiente
+  useEffect(() => {
+    const interval = setInterval(() => {
+      // Animar fade out del gradiente actual y fade in del siguiente
+      Animated.parallel([
+        Animated.timing(gradientOpacity1, {
+          toValue: 0,
+          duration: 1500, // Duración del fade
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(gradientOpacity2, {
+          toValue: 1,
+          duration: 1500,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ]).start(() => {
+        // Después de la animación, swap los índices y reset opacidades
+        setCurrentGradientIndex(nextGradientIndex);
+        setNextGradientIndex((nextGradientIndex + 1) % gradientColors.length);
+        gradientOpacity1.setValue(1);
+        gradientOpacity2.setValue(0);
+      });
+    }, 1800); // Cambia cada 4 segundos
+    return () => clearInterval(interval);
+  }, [nextGradientIndex]);
 
   const handlePressIn = () => {
     Animated.spring(btnScale, { toValue: 0.9, useNativeDriver: true }).start();
@@ -104,26 +138,35 @@ export default function WelcomeScreen() {
     }, 300);
   };
 
-  // Fondo degradado animado
-  const [gradientIndex, setGradientIndex] = useState(0);
+  // Gradientes con los mismos colores rotados
   const gradientColors: [string, string, ...string[]][] = [
-    ["#476EAE", "#48B3AF", "#A7E399", "#F6FF99"],
+    ["#476EAE", "#48B3AF", "#A7E399", "#e0c25eff"],
+    ["#48B3AF", "#A7E399", "#e0c25eff", "#476EAE"],
+    ["#A7E399", "#e0c25eff", "#476EAE", "#48B3AF"],
+    ["#e0c25eff", "#476EAE", "#48B3AF", "#A7E399"],
   ];
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setGradientIndex((prev) => (prev + 1) % gradientColors.length);
-    }, 4000);
-    return () => clearInterval(interval);
-  }, []);
-
   return (
-    <LinearGradient
-      colors={gradientColors[gradientIndex]}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-      style={styles.gradient}
-    >
+    <Animated.View style={styles.gradientContainer}>
+      {/* Gradiente actual */}
+      <Animated.View style={{ ...styles.gradient, opacity: gradientOpacity1 }}>
+        <LinearGradient
+          colors={gradientColors[currentGradientIndex]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFillObject}
+        />
+      </Animated.View>
+      {/* Gradiente siguiente */}
+      <Animated.View style={{ ...styles.gradient, opacity: gradientOpacity2 }}>
+        <LinearGradient
+          colors={gradientColors[nextGradientIndex]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFillObject}
+        />
+      </Animated.View>
+
       <Animated.View
         style={[
           styles.content,
@@ -152,18 +195,22 @@ export default function WelcomeScreen() {
           />
         )}
       </Animated.View>
-    </LinearGradient>
+    </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
-  gradient: {
+  gradientContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
   },
+  gradient: {
+    ...StyleSheet.absoluteFillObject,
+  },
   content: {
     alignItems: "center",
+    zIndex: 1, // Asegura que el contenido esté encima
   },
   logo: {
     fontSize: 32,
