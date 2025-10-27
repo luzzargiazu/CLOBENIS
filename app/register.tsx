@@ -17,7 +17,7 @@ import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
 import { auth, db } from "../firebase";
 
-const registerBackground = require("../assets/images/Login.jpg");
+const registerBackground = require("../assets/images/Registro.jpeg");
 
 export default function RegisterScreen() {
   const [username, setUsername] = useState<string>("");
