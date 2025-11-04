@@ -18,6 +18,7 @@ import {
 } from "react-native";
 import { GEMINI_API_KEY } from './config';
 import { styles } from './inicio.styles'; // 👈 IMPORTAR LOS ESTILOS
+import TennisCourtMap from './maps';
 
 const { width } = Dimensions.get("window");
 
@@ -367,12 +368,7 @@ Responde de forma estructurada con bullets cuando sea necesario y mantén las re
           </ScrollView>
         );
       case "buscar":
-        return (
-          <View style={styles.centerContent}>
-            <Text style={styles.comingSoon}>🔍</Text>
-            <Text style={styles.comingSoonText}>Buscar jugadores y canchas</Text>
-          </View>
-        );
+  return <TennisCourtMap />;
       case "partidos":
         return (
           <View style={styles.centerContent}>

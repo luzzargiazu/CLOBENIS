@@ -10,7 +10,14 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.tuusuario.tennisapp"
+      "bundleIdentifier": "com.tuusuario.tennisapp",
+      "config": {
+        "googleMapsApiKey": "AIzaSyBOWFbs86BalgScNfFqu-g-C8zDAglRFNw"
+      },
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "GlobeTennis necesita acceder a tu ubicación para mostrarte canchas de tenis cercanas.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "GlobeTennis necesita acceder a tu ubicación para mostrarte canchas de tenis cercanas."
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -21,7 +28,16 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION"
+      ],
+      "config": {
+        "googleMaps": {
+          "apiKey": "TU_API_KEY_AQUI"
+        }
+      }
     },
     "web": {
       "output": "static",
@@ -39,6 +55,12 @@
           "dark": {
             "backgroundColor": "#000000"
           }
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "GlobeTennis necesita acceder a tu ubicación para mostrarte canchas de tenis cercanas."
         }
       ]
     ],
