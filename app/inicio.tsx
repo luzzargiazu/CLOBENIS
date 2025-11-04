@@ -10,7 +10,6 @@ import {
   Platform,
   SafeAreaView,
   ScrollView,
-  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
@@ -18,14 +17,17 @@ import {
   Modal,
 } from "react-native";
 import { GEMINI_API_KEY } from './config';
+import { styles } from './inicio.styles'; // 👈 IMPORTAR LOS ESTILOS
+
 const { width } = Dimensions.get("window");
-// Inicializa la IA con tu API key (fuera del componente para  reutilizar)
+
+// Inicializa la IA con tu API key
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
 
-//logo aquí
+// Logo
 const logoImage = require("../assets/images/logo.png");
 
-//Tipos para el chatbot
+// Tipos para el chatbot
 interface Message {
   id: number;
   text: string;
@@ -43,7 +45,7 @@ export default function InicioScreen() {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const slideAnim = useRef(new Animated.Value(300)).current;
   
-  // Datos del usuario (simulados - en producción vendrían de tu base de datos)
+  // Datos del usuario
   const [userData, setUserData] = useState({
     name: "Usuario",
     initials: "TU",
@@ -138,7 +140,6 @@ export default function InicioScreen() {
 
   // 🤖 Función para llamar a Gemini API
   const callGeminiAPI = async (userMessage: string): Promise<string> => {
-    // Verificar que la API key existe
     if (!GEMINI_API_KEY) {
       console.error("❌ ERROR: API Key no encontrada");
       return "⚠️ Error de configuración: No se encontró la clave API de Gemini.";
@@ -147,8 +148,9 @@ export default function InicioScreen() {
     console.log("📡 Enviando mensaje a Gemini...");
     
     try {
-     const url = `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+      const url = `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
       console.log("🌐 URL construida correctamente");
+      
       const response = await fetch(url, {
         method: "POST",
         headers: {
@@ -215,7 +217,6 @@ Responde de forma estructurada con bullets cuando sea necesario y mantén las re
 
     const userMessageText = inputText.trim();
     
-    // Agregar mensaje del usuario
     const userMessage: Message = {
       id: messages.length + 1,
       text: userMessageText,
@@ -227,13 +228,11 @@ Responde de forma estructurada con bullets cuando sea necesario y mantén las re
     setInputText("");
     setIsLoading(true);
 
-    // Scroll al final
     setTimeout(() => {
       chatScrollRef.current?.scrollToEnd({ animated: true });
     }, 100);
 
     try {
-      //Gemini API
       const botResponseText = await callGeminiAPI(userMessageText);
       
       const botMessage: Message = {
@@ -245,7 +244,6 @@ Responde de forma estructurada con bullets cuando sea necesario y mantén las re
       
       setMessages((prev) => [...prev, botMessage]);
       
-      // Auto-scroll al final
       setTimeout(() => {
         chatScrollRef.current?.scrollToEnd({ animated: true });
       }, 100);
@@ -278,19 +276,16 @@ Responde de forma estructurada con bullets cuando sea necesario y mantén las re
   // Funciones del menú de usuario
   const handleViewProfile = () => {
     setShowUserMenu(false);
-    // Navegar a perfil (implementar navegación)
     console.log("Ver perfil");
   };
 
   const handleEditProfile = () => {
     setShowUserMenu(false);
-    // Navegar a editar perfil (implementar navegación)
     console.log("Editar perfil");
   };
 
   const handleViewLevel = () => {
     setShowUserMenu(false);
-    // Mostrar detalles del nivel (implementar modal o navegación)
     console.log("Ver nivel");
   };
 
@@ -520,7 +515,6 @@ Responde de forma estructurada con bullets cuando sea necesario y mantén las re
           >
             <Text style={styles.profileText}>{userData.initials}</Text>
           </LinearGradient>
-          {/* Badge de nivel */}
           <View style={styles.levelBadge}>
             <Text style={styles.levelBadgeText}>{userData.level}</Text>
           </View>
@@ -762,499 +756,3 @@ Responde de forma estructurada con bullets cuando sea necesario y mantén las re
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#f5f5f5",
-  },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: "#fff",
-    borderBottomWidth: 1,
-    borderBottomColor: "#e0e0e0",
-  },
-  headerLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  logoImage: {
-    width: 45,
-    height: 45,
-    marginRight: 10,  
-  },
-  greetingText: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#333",
-  },
-  profileButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    overflow: "visible",
-    position: "relative",
-  },
-  profileGradient: {
-    width: "100%",
-    height: "100%",
-    justifyContent: "center",
-    alignItems: "center",
-    borderRadius: 20,
-  },
-  profileText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "700",
-  },
-  levelBadge: {
-    position: "absolute",
-    bottom: -4,
-    right: -4,
-    backgroundColor: "#FFD700",
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 2,
-    borderColor: "#fff",
-  },
-  levelBadgeText: {
-    color: "#333",
-    fontSize: 10,
-    fontWeight: "800",
-  },
-  mainContent: {
-    flex: 1,
-  },
-  feedContainer: {
-    flex: 1,
-    padding: 16,
-  },
-  newsCarouselContainer: {
-    marginBottom: 20,
-    height: 170,
-  },
-  newsCardWrapper: {
-    width: width,
-    paddingHorizontal: 16,
-  },
-  newsCard: {
-    width: "100%",
-    height: 150,
-    borderRadius: 16,
-    padding: 20,
-    justifyContent: "center",
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowOffset: { width: 0, height: 4 },
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  newsTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#fff",
-    marginBottom: 8,
-    textShadowColor: "rgba(0,0,0,0.2)",
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 3,
-  },
-  newsDescription: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: "#fff",
-    opacity: 0.95,
-  },
-  dotsContainer: {
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-    marginTop: 12,
-  },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: "#ccc",
-    marginHorizontal: 4,
-  },
-  activeDot: {
-    backgroundColor: "#476EAE",
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#333",
-    marginBottom: 16,
-  },
-  feedItem: {
-    flexDirection: "row",
-    backgroundColor: "#fff",
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 12,
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  feedAvatar: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: "#476EAE",
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 12,
-  },
-  avatarText: {
-    color: "#fff",
-    fontSize: 20,
-    fontWeight: "700",
-  },
-  feedContent: {
-    flex: 1,
-    justifyContent: "center",
-  },
-  feedUser: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#333",
-  },
-  feedAction: {
-    fontSize: 14,
-    color: "#666",
-    marginTop: 2,
-  },
-  feedTime: {
-    fontSize: 12,
-    color: "#999",
-    marginTop: 4,
-  },
-  centerContent: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  comingSoon: {
-    fontSize: 60,
-    marginBottom: 16,
-  },
-  comingSoonText: {
-    fontSize: 18,
-    color: "#666",
-    fontWeight: "500",
-  },
-  tabBar: {
-    flexDirection: "row",
-    backgroundColor: "#fff",
-    borderTopWidth: 1,
-    borderTopColor: "#e0e0e0",
-    paddingBottom: 8,
-    paddingTop: 8,
-  },
-  tabItem: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  tabIcon: {
-    fontSize: 24,
-    marginBottom: 4,
-    opacity: 0.5,
-  },
-  tabIconActive: {
-    opacity: 1,
-  },
-  tabLabel: {
-    fontSize: 11,
-    color: "#666",
-    fontWeight: "500",
-  },
-  tabLabelActive: {
-    color: "#476EAE",
-    fontWeight: "700",
-  },
-  // 🤖 Estilos del Chat
-  chatContainer: {
-    flex: 1,
-    backgroundColor: "#f5f5f5",
-  },
-  messagesContainer: {
-    flex: 1,
-  },
-  messagesContent: {
-    padding: 16,
-    paddingBottom: 8,
-  },
-  messageBubble: {
-    maxWidth: "80%",
-    padding: 12,
-    borderRadius: 16,
-    marginBottom: 12,
-  },
-  userMessage: {
-    alignSelf: "flex-end",
-    backgroundColor: "#476EAE",
-  },
-  botMessage: {
-    alignSelf: "flex-start",
-    backgroundColor: "#fff",
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowOffset: { width: 0, height: 1 },
-    shadowRadius: 3,
-    elevation: 2,
-  },
-  messageText: {
-    fontSize: 15,
-    color: "#333",
-    lineHeight: 20,
-  },
-  userMessageText: {
-    color: "#fff",
-  },
-  messageTime: {
-    fontSize: 11,
-    color: "#999",
-    marginTop: 4,
-    alignSelf: "flex-end",
-  },
-  userMessageTime: {
-    color: "rgba(255,255,255,0.7)",
-  },
-  loadingContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    alignSelf: "flex-start",
-    backgroundColor: "#fff",
-    padding: 12,
-    borderRadius: 16,
-    marginBottom: 12,
-  },
-  loadingText: {
-    marginLeft: 8,
-    fontSize: 14,
-    color: "#666",
-  },
-  suggestionsContainer: {
-    maxHeight: 50,
-    borderTopWidth: 1,
-    borderTopColor: "#e0e0e0",
-    backgroundColor: "#fff",
-  },
-  suggestionsContent: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    gap: 8,
-  },
-  suggestionButton: {
-    backgroundColor: "#f0f0f0",
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    marginRight: 8,
-  },
-  suggestionText: {
-    fontSize: 13,
-    color: "#476EAE",
-    fontWeight: "500",
-  },
-  inputContainer: {
-    flexDirection: "row",
-    padding: 12,
-    backgroundColor: "#fff",
-    borderTopWidth: 1,
-    borderTopColor: "#e0e0e0",
-    alignItems: "center",
-  },
-  textInput: {
-    flex: 1,
-    backgroundColor: "#f5f5f5",
-    borderRadius: 24,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    fontSize: 15,
-    maxHeight: 100,
-    marginRight: 8,
-  },
-  sendButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    overflow: "hidden",
-  },
-  sendGradient: {
-    width: "100%",
-    height: "100%",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  sendButtonText: {
-    color: "#fff",
-    fontSize: 20,
-    fontWeight: "700",
-  },
-  //menu de usuario
-  menuOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    justifyContent: "flex-start",
-    alignItems: "flex-end",
-  },
-  userMenuContainer: {
-    width: 300,
-    height: "100%",
-    backgroundColor: "#fff",
-    shadowColor: "#000",
-    shadowOpacity: 0.3,
-    shadowOffset: { width: -2, height: 0 },
-    shadowRadius: 10,
-    elevation: 10,
-  },
-  userMenuHeader: {
-    padding: 24,
-    paddingTop: 60,
-    alignItems: "center",
-  },
-  userMenuAvatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: "rgba(255,255,255,0.3)",
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 16,
-    borderWidth: 3,
-    borderColor: "#fff",
-  },
-  userMenuAvatarText: {
-    color: "#fff",
-    fontSize: 32,
-    fontWeight: "700",
-  },
-  userMenuName: {
-    fontSize: 22,
-    fontWeight: "700",
-    color: "#fff",
-    marginBottom: 4,
-  },
-  userMenuMember: {
-    fontSize: 13,
-    color: "rgba(255,255,255,0.9)",
-  },
-  levelSection: {
-    padding: 20,
-    backgroundColor: "#f9f9f9",
-    borderBottomWidth: 1,
-    borderBottomColor: "#e0e0e0",
-  },
-  levelHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 8,
-  },
-  levelTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#333",
-  },
-  levelXP: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#666",
-  },
-  progressBarContainer: {
-    height: 8,
-    backgroundColor: "#e0e0e0",
-    borderRadius: 4,
-    overflow: "hidden",
-    marginBottom: 8,
-  },
-  progressBar: {
-    height: "100%",
-    borderRadius: 4,
-  },
-  levelDescription: {
-    fontSize: 12,
-    color: "#666",
-    fontStyle: "italic",
-  },
-  statsSection: {
-    flexDirection: "row",
-    padding: 20,
-    justifyContent: "space-around",
-    borderBottomWidth: 1,
-    borderBottomColor: "#e0e0e0",
-  },
-  statItem: {
-    alignItems: "center",
-  },
-  statNumber: {
-    fontSize: 24,
-    fontWeight: "700",
-    color: "#476EAE",
-    marginBottom: 4,
-  },
-  statLabel: {
-    fontSize: 12,
-    color: "#666",
-  },
-  statDivider: {
-    width: 1,
-    backgroundColor: "#e0e0e0",
-  },
-  menuOptions: {
-    padding: 16,
-  },
-  menuOption: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 16,
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    marginBottom: 12,
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  menuOptionIcon: {
-    fontSize: 24,
-    marginRight: 16,
-  },
-  menuOptionText: {
-    flex: 1,
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#333",
-  },
-  menuOptionArrow: {
-    fontSize: 24,
-    color: "#999",
-  },
-  closeButton: {
-    margin: 16,
-    padding: 16,
-    backgroundColor: "#f5f5f5",
-    borderRadius: 12,
-    alignItems: "center",
-  },
-  closeButtonText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#666",
-  },
-});
