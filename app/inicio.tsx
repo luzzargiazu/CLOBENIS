@@ -15,16 +15,17 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  Modal,
 } from "react-native";
 import { GEMINI_API_KEY } from './config';
 const { width } = Dimensions.get("window");
 // Inicializa la IA con tu API key (fuera del componente para  reutilizar)
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
 
-// ✅ Tu logo aquí
+//logo aquí
 const logoImage = require("../assets/images/logo.png");
 
-// 🤖 Tipos para el chatbot
+//Tipos para el chatbot
 interface Message {
   id: number;
   text: string;
@@ -38,7 +39,23 @@ export default function InicioScreen() {
   const scrollX = useRef(new Animated.Value(0)).current;
   const scrollViewRef = useRef<ScrollView>(null);
   
-  // 🤖 Estados del chatbot
+  // Estado del menú de usuario
+  const [showUserMenu, setShowUserMenu] = useState(false);
+  const slideAnim = useRef(new Animated.Value(300)).current;
+  
+  // Datos del usuario (simulados - en producción vendrían de tu base de datos)
+  const [userData, setUserData] = useState({
+    name: "Usuario",
+    initials: "TU",
+    level: 5,
+    xp: 750,
+    xpToNextLevel: 1000,
+    memberSince: "Enero 2024",
+    matchesPlayed: 47,
+    wins: 32,
+  });
+  
+  // Estados del chatbot
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 1,
@@ -68,13 +85,13 @@ export default function InicioScreen() {
       id: 2,
       title: "Nueva cancha disponible",
       description: "Reserva ahora en el Club Central",
-      color: ["#48B3AF", "#A7E399"],
+      color: ["#48B3AF", "#85cf75ff"],
     },
     {
       id: 3,
       title: "Ranking actualizado",
       description: "Revisa tu posición en el ranking mensual",
-      color: ["#A7E399", "#e0c25eff"],
+      color: ["#85cf75ff", "#e0c25eff"],
     },
   ];
 
@@ -84,7 +101,7 @@ export default function InicioScreen() {
       setCurrentNewsIndex((prev) => {
         const nextIndex = (prev + 1) % newsItems.length;
         scrollViewRef.current?.scrollTo({
-          x: nextIndex * (width - 15),
+          x: nextIndex * width,
           animated: true,
         });
         return nextIndex;
@@ -93,6 +110,24 @@ export default function InicioScreen() {
 
     return () => clearInterval(interval);
   }, []);
+
+  // Animación del menú de usuario
+  useEffect(() => {
+    if (showUserMenu) {
+      Animated.spring(slideAnim, {
+        toValue: 0,
+        useNativeDriver: true,
+        tension: 50,
+        friction: 8,
+      }).start();
+    } else {
+      Animated.timing(slideAnim, {
+        toValue: 300,
+        duration: 250,
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [showUserMenu]);
 
   // Datos de ejemplo para el feed
   const feedItems = [
@@ -198,7 +233,7 @@ Responde de forma estructurada con bullets cuando sea necesario y mantén las re
     }, 100);
 
     try {
-      // Llamar a Gemini API
+      //Gemini API
       const botResponseText = await callGeminiAPI(userMessageText);
       
       const botMessage: Message = {
@@ -228,7 +263,7 @@ Responde de forma estructurada con bullets cuando sea necesario y mantén las re
     }
   };
 
-  // 🤖 Sugerencias rápidas
+  // Sugerencias rápidas
   const quickSuggestions = [
     "Cómo mejorar mi derecha",
     "Nutrición antes del partido",
@@ -238,6 +273,25 @@ Responde de forma estructurada con bullets cuando sea necesario y mantén las re
 
   const handleQuickSuggestion = (suggestion: string) => {
     setInputText(suggestion);
+  };
+
+  // Funciones del menú de usuario
+  const handleViewProfile = () => {
+    setShowUserMenu(false);
+    // Navegar a perfil (implementar navegación)
+    console.log("Ver perfil");
+  };
+
+  const handleEditProfile = () => {
+    setShowUserMenu(false);
+    // Navegar a editar perfil (implementar navegación)
+    console.log("Editar perfil");
+  };
+
+  const handleViewLevel = () => {
+    setShowUserMenu(false);
+    // Mostrar detalles del nivel (implementar modal o navegación)
+    console.log("Ver nivel");
   };
 
   const renderContent = () => {
@@ -261,24 +315,27 @@ Responde de forma estructurada con bullets cuando sea necesario y mantén las re
                 scrollEventThrottle={16}
                 onMomentumScrollEnd={(event) => {
                   const newIndex = Math.round(
-                    event.nativeEvent.contentOffset.x / (width - 32)
+                    event.nativeEvent.contentOffset.x / width
                   );
                   setCurrentNewsIndex(newIndex);
                 }}
+                snapToInterval={width}
+                decelerationRate="fast"
               >
                 {newsItems.map((news) => (
-                  <LinearGradient
-                    key={news.id}
-                    colors={news.color}
-                    style={styles.newsCard}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                  >
-                    <Text style={styles.newsTitle}>{news.title}</Text>
-                    <Text style={styles.newsDescription}>
-                      {news.description}
-                    </Text>
-                  </LinearGradient>
+                  <View key={news.id} style={styles.newsCardWrapper}>
+                    <LinearGradient
+                      colors={news.color}
+                      style={styles.newsCard}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                    >
+                      <Text style={styles.newsTitle}>{news.title}</Text>
+                      <Text style={styles.newsDescription}>
+                        {news.description}
+                      </Text>
+                    </LinearGradient>
+                  </View>
                 ))}
               </ScrollView>
               
@@ -451,20 +508,144 @@ Responde de forma estructurada con bullets cuando sea necesario y mantén las re
             style={styles.logoImage}
             resizeMode="contain"
           />
-          <Text style={styles.greetingText}>Hola, usuario</Text>
+          <Text style={styles.greetingText}>Hola, {userData.name}</Text>
         </View>
-        <TouchableOpacity style={styles.profileButton}>
+        <TouchableOpacity 
+          style={styles.profileButton}
+          onPress={() => setShowUserMenu(!showUserMenu)}
+        >
           <LinearGradient
             colors={["#476EAE", "#48B3AF"]}
             style={styles.profileGradient}
           >
-            <Text style={styles.profileText}>TU</Text>
+            <Text style={styles.profileText}>{userData.initials}</Text>
           </LinearGradient>
+          {/* Badge de nivel */}
+          <View style={styles.levelBadge}>
+            <Text style={styles.levelBadgeText}>{userData.level}</Text>
+          </View>
         </TouchableOpacity>
       </View>
 
       {/* Contenido principal */}
       <View style={styles.mainContent}>{renderContent()}</View>
+
+      {/* Menú desplegable de usuario */}
+      <Modal
+        visible={showUserMenu}
+        transparent={true}
+        animationType="none"
+        onRequestClose={() => setShowUserMenu(false)}
+      >
+        <TouchableOpacity 
+          style={styles.menuOverlay}
+          activeOpacity={1}
+          onPress={() => setShowUserMenu(false)}
+        >
+          <Animated.View 
+            style={[
+              styles.userMenuContainer,
+              {
+                transform: [{ translateX: slideAnim }]
+              }
+            ]}
+          >
+            {/* Header del menú */}
+            <LinearGradient
+              colors={["#476EAE", "#48B3AF"]}
+              style={styles.userMenuHeader}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+            >
+              <View style={styles.userMenuAvatar}>
+                <Text style={styles.userMenuAvatarText}>{userData.initials}</Text>
+              </View>
+              <Text style={styles.userMenuName}>{userData.name}</Text>
+              <Text style={styles.userMenuMember}>Miembro desde {userData.memberSince}</Text>
+            </LinearGradient>
+
+            {/* Nivel y XP */}
+            <View style={styles.levelSection}>
+              <View style={styles.levelHeader}>
+                <Text style={styles.levelTitle}>Nivel {userData.level}</Text>
+                <Text style={styles.levelXP}>{userData.xp}/{userData.xpToNextLevel} XP</Text>
+              </View>
+              <View style={styles.progressBarContainer}>
+                <LinearGradient
+                  colors={["#476EAE", "#48B3AF"]}
+                  style={[
+                    styles.progressBar,
+                    { width: `${(userData.xp / userData.xpToNextLevel) * 100}%` }
+                  ]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                />
+              </View>
+              <Text style={styles.levelDescription}>
+                🎾 Juega más partidos y usa la app para subir de nivel
+              </Text>
+            </View>
+
+            {/* Estadísticas rápidas */}
+            <View style={styles.statsSection}>
+              <View style={styles.statItem}>
+                <Text style={styles.statNumber}>{userData.matchesPlayed}</Text>
+                <Text style={styles.statLabel}>Partidos</Text>
+              </View>
+              <View style={styles.statDivider} />
+              <View style={styles.statItem}>
+                <Text style={styles.statNumber}>{userData.wins}</Text>
+                <Text style={styles.statLabel}>Victorias</Text>
+              </View>
+              <View style={styles.statDivider} />
+              <View style={styles.statItem}>
+                <Text style={styles.statNumber}>
+                  {Math.round((userData.wins / userData.matchesPlayed) * 100)}%
+                </Text>
+                <Text style={styles.statLabel}>Win Rate</Text>
+              </View>
+            </View>
+
+            {/* Opciones del menú */}
+            <View style={styles.menuOptions}>
+              <TouchableOpacity 
+                style={styles.menuOption}
+                onPress={handleViewProfile}
+              >
+                <Text style={styles.menuOptionIcon}>👤</Text>
+                <Text style={styles.menuOptionText}>Ver Perfil</Text>
+                <Text style={styles.menuOptionArrow}>›</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={styles.menuOption}
+                onPress={handleEditProfile}
+              >
+                <Text style={styles.menuOptionIcon}>✏️</Text>
+                <Text style={styles.menuOptionText}>Editar Perfil</Text>
+                <Text style={styles.menuOptionArrow}>›</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={styles.menuOption}
+                onPress={handleViewLevel}
+              >
+                <Text style={styles.menuOptionIcon}>⭐</Text>
+                <Text style={styles.menuOptionText}>Mi Nivel</Text>
+                <Text style={styles.menuOptionArrow}>›</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Botón de cerrar */}
+            <TouchableOpacity 
+              style={styles.closeButton}
+              onPress={() => setShowUserMenu(false)}
+            >
+              <Text style={styles.closeButtonText}>Cerrar Sesion</Text>
+            </TouchableOpacity>
+          </Animated.View>
+        </TouchableOpacity>
+      </Modal>
 
       {/* Barra de navegación inferior */}
       <View style={styles.tabBar}>
@@ -615,18 +796,38 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    overflow: "hidden",
+    overflow: "visible",
+    position: "relative",
   },
   profileGradient: {
     width: "100%",
     height: "100%",
     justifyContent: "center",
     alignItems: "center",
+    borderRadius: 20,
   },
   profileText: {
     color: "#fff",
     fontSize: 16,
     fontWeight: "700",
+  },
+  levelBadge: {
+    position: "absolute",
+    bottom: -4,
+    right: -4,
+    backgroundColor: "#FFD700",
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 2,
+    borderColor: "#fff",
+  },
+  levelBadgeText: {
+    color: "#333",
+    fontSize: 10,
+    fontWeight: "800",
   },
   mainContent: {
     flex: 1,
@@ -637,13 +838,17 @@ const styles = StyleSheet.create({
   },
   newsCarouselContainer: {
     marginBottom: 20,
+    height: 170,
+  },
+  newsCardWrapper: {
+    width: width,
+    paddingHorizontal: 16,
   },
   newsCard: {
-    width: width - 32,
+    width: "100%",
     height: 150,
     borderRadius: 16,
     padding: 20,
-    marginRight: 0,
     justifyContent: "center",
     shadowColor: "#000",
     shadowOpacity: 0.1,
@@ -899,5 +1104,157 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 20,
     fontWeight: "700",
+  },
+  //menu de usuario
+  menuOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "flex-start",
+    alignItems: "flex-end",
+  },
+  userMenuContainer: {
+    width: 300,
+    height: "100%",
+    backgroundColor: "#fff",
+    shadowColor: "#000",
+    shadowOpacity: 0.3,
+    shadowOffset: { width: -2, height: 0 },
+    shadowRadius: 10,
+    elevation: 10,
+  },
+  userMenuHeader: {
+    padding: 24,
+    paddingTop: 60,
+    alignItems: "center",
+  },
+  userMenuAvatar: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: "rgba(255,255,255,0.3)",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 16,
+    borderWidth: 3,
+    borderColor: "#fff",
+  },
+  userMenuAvatarText: {
+    color: "#fff",
+    fontSize: 32,
+    fontWeight: "700",
+  },
+  userMenuName: {
+    fontSize: 22,
+    fontWeight: "700",
+    color: "#fff",
+    marginBottom: 4,
+  },
+  userMenuMember: {
+    fontSize: 13,
+    color: "rgba(255,255,255,0.9)",
+  },
+  levelSection: {
+    padding: 20,
+    backgroundColor: "#f9f9f9",
+    borderBottomWidth: 1,
+    borderBottomColor: "#e0e0e0",
+  },
+  levelHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  levelTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#333",
+  },
+  levelXP: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#666",
+  },
+  progressBarContainer: {
+    height: 8,
+    backgroundColor: "#e0e0e0",
+    borderRadius: 4,
+    overflow: "hidden",
+    marginBottom: 8,
+  },
+  progressBar: {
+    height: "100%",
+    borderRadius: 4,
+  },
+  levelDescription: {
+    fontSize: 12,
+    color: "#666",
+    fontStyle: "italic",
+  },
+  statsSection: {
+    flexDirection: "row",
+    padding: 20,
+    justifyContent: "space-around",
+    borderBottomWidth: 1,
+    borderBottomColor: "#e0e0e0",
+  },
+  statItem: {
+    alignItems: "center",
+  },
+  statNumber: {
+    fontSize: 24,
+    fontWeight: "700",
+    color: "#476EAE",
+    marginBottom: 4,
+  },
+  statLabel: {
+    fontSize: 12,
+    color: "#666",
+  },
+  statDivider: {
+    width: 1,
+    backgroundColor: "#e0e0e0",
+  },
+  menuOptions: {
+    padding: 16,
+  },
+  menuOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 16,
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    marginBottom: 12,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  menuOptionIcon: {
+    fontSize: 24,
+    marginRight: 16,
+  },
+  menuOptionText: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#333",
+  },
+  menuOptionArrow: {
+    fontSize: 24,
+    color: "#999",
+  },
+  closeButton: {
+    margin: 16,
+    padding: 16,
+    backgroundColor: "#f5f5f5",
+    borderRadius: 12,
+    alignItems: "center",
+  },
+  closeButtonText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#666",
   },
 });
