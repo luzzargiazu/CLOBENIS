@@ -75,13 +75,19 @@ export default function RegisterScreen() {
       });
 
       // Guardar datos adicionales en Firestore
-      await setDoc(doc(db, "users", user.uid), {
-        username: username,
-        email: email,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      });
-
+    // Guardar datos adicionales en Firestore con estadísticas iniciales
+     await setDoc(doc(db, "users", user.uid), {
+     username: username,
+     email: email,
+     level: 1,
+     xp: 0,
+     xpToNextLevel: 100,
+     matchesPlayed: 0,
+     wins: 0,
+     loses: 0,
+     createdAt: new Date().toISOString(),
+     updatedAt: new Date().toISOString(),
+});
       // Mostrar éxito
       setSuccessMessage("¡Cuenta creada exitosamente!");
       

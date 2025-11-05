@@ -495,5 +495,25 @@ export const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
     color: "#666",
-  },
+  },registerMatchButton: {
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "center",
+  backgroundColor: "#476EAE",
+  paddingVertical: 12,
+  paddingHorizontal: 24,
+  borderRadius: 25,
+  marginTop: 20,
+  shadowColor: "#000",
+  shadowOffset: { width: 0, height: 3 },
+  shadowOpacity: 0.2,
+  shadowRadius: 5,
+},
+registerMatchText: {
+  color: "#fff",
+  fontSize: 16,
+  fontWeight: "600",
+  marginLeft: 8,
+},
+
 });

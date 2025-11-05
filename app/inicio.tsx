@@ -1,6 +1,9 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { LinearGradient } from "expo-linear-gradient";
 import { useEffect, useRef, useState } from "react";
+import { doc, getDoc, onSnapshot } from 'firebase/firestore';
+import { db } from '../firebase';
+import { Ionicons } from "@expo/vector-icons";
 import {
   ActivityIndicator,
   Animated,
@@ -56,12 +59,13 @@ export default function InicioScreen() {
   const [userData, setUserData] = useState({
     name: "Usuario",
     initials: "U",
-    level: 5,
-    xp: 750,
-    xpToNextLevel: 1000,
+    level: 0,
+    xp: 0,
+    xpToNextLevel: 0,
     memberSince: "Enero 2024",
-    matchesPlayed: 47,
-    wins: 32,
+    matchesPlayed: 0,
+    wins: 0,
+    loses: 0,
   });
   
   // Estados del chatbot
@@ -105,32 +109,76 @@ export default function InicioScreen() {
   ];
 
   // 🔥 Cargar datos del usuario autenticado
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        // Usuario está autenticado
-        const displayName = user.displayName || "Usuario";
-        const initials = displayName
-          .split(" ")
-          .map(word => word.charAt(0).toUpperCase())
-          .slice(0, 2)
-          .join("");
-        
-        setUserData(prev => ({
-          ...prev,
-          name: displayName,
-          initials: initials || "U",
-        }));
-        
-        console.log("✅ Usuario cargado:", displayName);
-        console.log("✅ Iniciales:", initials);
-      } else {
-        console.log("⚠️ No hay usuario autenticado");
-      }
-    });
+ // 🔥 Cargar datos del usuario autenticado desde Firestore
+useEffect(() => {
+  let unsubscribeFirestore: (() => void) | undefined;
 
-    return () => unsubscribe();
-  }, []);
+  const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
+    if (user) {
+      try {
+        // 📌 LISTENER EN TIEMPO REAL - Se actualiza automáticamente
+        const userDocRef = doc(db, "users", user.uid);
+        
+        // onSnapshot escucha cambios en tiempo real
+        unsubscribeFirestore = onSnapshot(userDocRef, (docSnap: { exists: () => any; data: () => any; }) => {
+          if (docSnap.exists()) {
+            const userData = docSnap.data();
+            const displayName = user.displayName || userData.username || "Usuario";
+            const initials = displayName
+              .split(" ")
+              .map((word: string) => word.charAt(0).toUpperCase())
+              .slice(0, 2)
+              .join("");
+            
+            // Calcular la fecha de registro
+            const createdDate = userData.createdAt 
+              ? new Date(userData.createdAt).toLocaleDateString('es-ES', { 
+                  year: 'numeric', 
+                  month: 'long' 
+                })
+              : "Enero 2024";
+            
+            // ✅ Actualiza el estado cada vez que cambian los datos
+            setUserData({
+              name: displayName,
+              initials: initials || "U",
+              level: userData.level || 1,
+              xp: userData.xp || 0,
+              xpToNextLevel: userData.xpToNextLevel || 100,
+              memberSince: createdDate,
+              matchesPlayed: userData.matchesPlayed || 0,
+              wins: userData.wins || 0,
+              loses: userData.loses || 0,
+            });
+            
+            console.log("✅ Datos del usuario actualizados desde Firestore:", displayName);
+          } else {
+            console.log("⚠️ No se encontraron datos del usuario en Firestore");
+          }
+        }, (error: any) => {
+          console.error("❌ Error al escuchar cambios del usuario:", error);
+        });
+        
+      } catch (error) {
+        console.error("❌ Error al configurar listener:", error);
+      }
+    } else {
+      console.log("⚠️ No hay usuario autenticado");
+      // Limpia el listener si no hay usuario
+      if (unsubscribeFirestore) {
+        unsubscribeFirestore();
+      }
+    }
+  });
+
+  // 🧹 Limpieza: cancela ambos listeners cuando el componente se desmonte
+  return () => {
+    unsubscribeAuth();
+    if (unsubscribeFirestore) {
+      unsubscribeFirestore();
+    }
+  };
+}, []);
 
   // Auto-scroll cada 5 segundos
   useEffect(() => {
@@ -415,12 +463,21 @@ Responde de forma estructurada con bullets cuando sea necesario y mantén las re
       case "buscar":
   return <TennisCourtMap />;
       case "partidos":
-        return (
-          <View style={styles.centerContent}>
-            <Text style={styles.comingSoon}>🎾</Text>
-            <Text style={styles.comingSoonText}>Tus próximos partidos</Text>
-          </View>
-        );
+  return (
+    <View style={styles.centerContent}>
+      <Text style={styles.comingSoon}>🎾</Text>
+      <Text style={styles.comingSoonText}>Tus próximos partidos</Text>
+
+      <TouchableOpacity
+        style={styles.registerMatchButton}
+        onPress={() => router.push("/RegisterMatch")}
+      >
+        <Ionicons name="tennisball-outline" size={22} color="#fff" />
+        <Text style={styles.registerMatchText}>Registrar Partido</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
       case "ranking":
         return (
           <View style={styles.centerContent}>
@@ -634,23 +691,17 @@ Responde de forma estructurada con bullets cuando sea necesario y mantén las re
               </View>
               <View style={styles.statDivider} />
               <View style={styles.statItem}>
-                <Text style={styles.statNumber}>
-                  {Math.round((userData.wins / userData.matchesPlayed) * 100)}%
-                </Text>
-                <Text style={styles.statLabel}>Win Rate</Text>
-              </View>
+              <Text style={styles.statNumber}>
+              {userData.matchesPlayed > 0 
+               ? Math.round((userData.wins / userData.matchesPlayed) * 100):0}%
+              </Text>
+             <Text style={styles.statLabel}>Win Rate</Text>
+            </View>
             </View>
 
             {/* Opciones del menú */}
             <View style={styles.menuOptions}>
-              <TouchableOpacity 
-                style={styles.menuOption}
-                onPress={handleViewProfile}
-              >
-                <Text style={styles.menuOptionIcon}>👤</Text>
-                <Text style={styles.menuOptionText}>Ver Perfil</Text>
-                <Text style={styles.menuOptionArrow}>›</Text>
-              </TouchableOpacity>
+              
 
               <TouchableOpacity 
                 style={styles.menuOption}
