@@ -17,8 +17,13 @@ import {
   Modal,
 } from "react-native";
 import { GEMINI_API_KEY } from './config';
-import { styles } from './inicio.styles'; // 👈 IMPORTAR LOS ESTILOS
+import { styles } from './inicio.styles';
 import TennisCourtMap from './maps';
+import React from "react";
+// 🔥 IMPORTS PARA FIREBASE AUTH
+import { auth } from '../firebase';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { useRouter } from 'expo-router';
 
 const { width } = Dimensions.get("window");
 
@@ -37,6 +42,7 @@ interface Message {
 }
 
 export default function InicioScreen() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState("inicio");
   const [currentNewsIndex, setCurrentNewsIndex] = useState(0);
   const scrollX = useRef(new Animated.Value(0)).current;
@@ -49,7 +55,7 @@ export default function InicioScreen() {
   // Datos del usuario
   const [userData, setUserData] = useState({
     name: "Usuario",
-    initials: "TU",
+    initials: "U",
     level: 5,
     xp: 750,
     xpToNextLevel: 1000,
@@ -97,6 +103,34 @@ export default function InicioScreen() {
       color: ["#85cf75ff", "#e0c25eff"],
     },
   ];
+
+  // 🔥 Cargar datos del usuario autenticado
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        // Usuario está autenticado
+        const displayName = user.displayName || "Usuario";
+        const initials = displayName
+          .split(" ")
+          .map(word => word.charAt(0).toUpperCase())
+          .slice(0, 2)
+          .join("");
+        
+        setUserData(prev => ({
+          ...prev,
+          name: displayName,
+          initials: initials || "U",
+        }));
+        
+        console.log("✅ Usuario cargado:", displayName);
+        console.log("✅ Iniciales:", initials);
+      } else {
+        console.log("⚠️ No hay usuario autenticado");
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   // Auto-scroll cada 5 segundos
   useEffect(() => {
@@ -288,6 +322,17 @@ Responde de forma estructurada con bullets cuando sea necesario y mantén las re
   const handleViewLevel = () => {
     setShowUserMenu(false);
     console.log("Ver nivel");
+  };
+
+  // 🔥 Función para cerrar sesión
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      console.log("✅ Sesión cerrada correctamente");
+      router.replace("/login");
+    } catch (error) {
+      console.error("❌ Error al cerrar sesión:", error);
+    }
   };
 
   const renderContent = () => {
@@ -626,12 +671,12 @@ Responde de forma estructurada con bullets cuando sea necesario y mantén las re
               </TouchableOpacity>
             </View>
 
-            {/* Botón de cerrar */}
+            {/* Botón de cerrar sesión */}
             <TouchableOpacity 
               style={styles.closeButton}
-              onPress={() => setShowUserMenu(false)}
+              onPress={handleLogout}
             >
-              <Text style={styles.closeButtonText}>Cerrar Sesion</Text>
+              <Text style={styles.closeButtonText}>Cerrar Sesión</Text>
             </TouchableOpacity>
           </Animated.View>
         </TouchableOpacity>

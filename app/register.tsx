@@ -16,6 +16,7 @@ import {
 import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
 import { auth, db } from "../firebase";
+import React from "react";
 
 const registerBackground = require("../assets/images/Registro.jpeg");
 

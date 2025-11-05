@@ -14,6 +14,7 @@ import {
 } from "react-native";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../firebase";
+import React from "react";
 
 const loginBackground = require("../assets/images/Login.jpg");
 
