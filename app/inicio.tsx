@@ -19,9 +19,11 @@ import {
   View,
   Modal,
 } from "react-native";
+import { Linking } from "react-native";
 import { GEMINI_API_KEY } from './config';
 import { styles } from './inicio.styles';
 import TennisCourtMap from './maps';
+import Amigos from "./Amigos";
 import React from "react";
 // 🔥 IMPORTS PARA FIREBASE AUTH
 import { auth } from '../firebase';
@@ -97,13 +99,13 @@ export default function InicioScreen() {
     {
       id: 2,
       title: "Nueva cancha disponible",
-      description: "Reserva ahora en el Club Central",
+      description: "Reserva ahora en la Facdef",
       color: ["#48B3AF", "#85cf75ff"],
     },
     {
       id: 3,
-      title: "Ranking actualizado",
-      description: "Revisa tu posición en el ranking mensual",
+      title: "NOTICIA 3",
+      description: "...",
       color: ["#85cf75ff", "#e0c25eff"],
     },
   ];
@@ -153,7 +155,7 @@ useEffect(() => {
             
             console.log("✅ Datos del usuario actualizados desde Firestore:", displayName);
           } else {
-            console.log("⚠️ No se encontraron datos del usuario en Firestore");
+            console.log("⚠ No se encontraron datos del usuario en Firestore");
           }
         }, (error: any) => {
           console.error("❌ Error al escuchar cambios del usuario:", error);
@@ -163,7 +165,7 @@ useEffect(() => {
         console.error("❌ Error al configurar listener:", error);
       }
     } else {
-      console.log("⚠️ No hay usuario autenticado");
+      console.log("⚠ No hay usuario autenticado");
       // Limpia el listener si no hay usuario
       if (unsubscribeFirestore) {
         unsubscribeFirestore();
@@ -218,20 +220,20 @@ useEffect(() => {
   const feedItems = [
     { id: 1, user: "Carlos M.", action: "ganó un partido", time: "Hace 2h" },
     { id: 2, user: "Ana L.", action: "reservó una cancha", time: "Hace 4h" },
-    { id: 3, user: "Miguel R.", action: "subió de ranking", time: "Hace 6h" },
+    { id: 3, user: "Miguel R.", action: "subió de nivel", time: "Hace 6h" },
   ];
 
   // 🤖 Función para llamar a Gemini API
   const callGeminiAPI = async (userMessage: string): Promise<string> => {
     if (!GEMINI_API_KEY) {
       console.error("❌ ERROR: API Key no encontrada");
-      return "⚠️ Error de configuración: No se encontró la clave API de Gemini.";
+      return "⚠ Error de configuración: No se encontró la clave API de Gemini.";
     }
 
     console.log("📡 Enviando mensaje a Gemini...");
     
     try {
-      const url = `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+      const url = 'https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}';
       console.log("🌐 URL construida correctamente");
       
       const response = await fetch(url, {
@@ -362,15 +364,23 @@ Responde de forma estructurada con bullets cuando sea necesario y mantén las re
     console.log("Ver perfil");
   };
 
-  const handleEditProfile = () => {
-    setShowUserMenu(false);
-    console.log("Editar perfil");
-  };
+const handleEditProfile = () => {
+  setShowUserMenu(false);
+  console.log("Editar perfil");
+  router.push("/editperfil");  
+};
 
-  const handleViewLevel = () => {
-    setShowUserMenu(false);
-    console.log("Ver nivel");
-  };
+
+const handleOpenSettings = async () => {
+  setShowUserMenu(false);
+  try {
+    // Abre la configuración del sistema (Android / iOS)
+    await Linking.openSettings();
+    console.log("⚙ Abriendo configuraciones del dispositivo...");
+  } catch (error) {
+    console.error("❌ No se pudo abrir Configuración:", error);
+  }
+};
 
   // 🔥 Función para cerrar sesión
   const handleLogout = async () => {
@@ -479,12 +489,8 @@ Responde de forma estructurada con bullets cuando sea necesario y mantén las re
   );
 
       case "ranking":
-        return (
-          <View style={styles.centerContent}>
-            <Text style={styles.comingSoon}>🏆</Text>
-            <Text style={styles.comingSoonText}>Rankings y estadísticas</Text>
-          </View>
-        );
+         return <Amigos />;
+        
       case "perfil":
         return (
           <KeyboardAvoidingView
@@ -623,115 +629,124 @@ Responde de forma estructurada con bullets cuando sea necesario y mantén las re
       <View style={styles.mainContent}>{renderContent()}</View>
 
       {/* Menú desplegable de usuario */}
-      <Modal
-        visible={showUserMenu}
-        transparent={true}
-        animationType="none"
-        onRequestClose={() => setShowUserMenu(false)}
+<Modal
+  visible={showUserMenu}
+  transparent={true}
+  animationType="none"
+  onRequestClose={() => setShowUserMenu(false)}
+>
+  <TouchableOpacity 
+    style={styles.menuOverlay}
+    activeOpacity={1}
+    onPress={() => setShowUserMenu(false)}
+  >
+    <Animated.View 
+      style={[
+        styles.userMenuContainer,
+        {
+          transform: [{ translateX: slideAnim }]
+        }
+      ]}
+    >
+      {/* Header del menú */}
+      <LinearGradient
+        colors={["#476EAE", "#48B3AF"]}
+        style={styles.userMenuHeader}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
       >
-        <TouchableOpacity 
-          style={styles.menuOverlay}
-          activeOpacity={1}
-          onPress={() => setShowUserMenu(false)}
-        >
-          <Animated.View 
+        <View style={styles.userMenuAvatar}>
+          <Text style={styles.userMenuAvatarText}>{userData.initials}</Text>
+        </View>
+        <Text style={styles.userMenuName}>{userData.name}</Text>
+        <Text style={styles.userMenuMember}>Miembro desde {userData.memberSince}</Text>
+      </LinearGradient>
+
+      {/* Nivel y XP */}
+      <View style={styles.levelSection}>
+        <View style={styles.levelHeader}>
+          <Text style={styles.levelTitle}>Nivel {userData.level}</Text>
+          <Text style={styles.levelXP}>{userData.xp}/{userData.xpToNextLevel} XP</Text>
+        </View>
+        <View style={styles.progressBarContainer}>
+          <LinearGradient
+            colors={["#476EAE", "#48B3AF"]}
             style={[
-              styles.userMenuContainer,
-              {
-                transform: [{ translateX: slideAnim }]
-              }
+              styles.progressBar,
+              { width: `${(userData.xp / userData.xpToNextLevel) * 100}%` }
             ]}
-          >
-            {/* Header del menú */}
-            <LinearGradient
-              colors={["#476EAE", "#48B3AF"]}
-              style={styles.userMenuHeader}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-            >
-              <View style={styles.userMenuAvatar}>
-                <Text style={styles.userMenuAvatarText}>{userData.initials}</Text>
-              </View>
-              <Text style={styles.userMenuName}>{userData.name}</Text>
-              <Text style={styles.userMenuMember}>Miembro desde {userData.memberSince}</Text>
-            </LinearGradient>
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+          />
+        </View>
+        <Text style={styles.levelDescription}>
+          🎾 Juega más partidos y usa la app para subir de nivel
+        </Text>
+      </View>
 
-            {/* Nivel y XP */}
-            <View style={styles.levelSection}>
-              <View style={styles.levelHeader}>
-                <Text style={styles.levelTitle}>Nivel {userData.level}</Text>
-                <Text style={styles.levelXP}>{userData.xp}/{userData.xpToNextLevel} XP</Text>
-              </View>
-              <View style={styles.progressBarContainer}>
-                <LinearGradient
-                  colors={["#476EAE", "#48B3AF"]}
-                  style={[
-                    styles.progressBar,
-                    { width: `${(userData.xp / userData.xpToNextLevel) * 100}%` }
-                  ]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                />
-              </View>
-              <Text style={styles.levelDescription}>
-                🎾 Juega más partidos y usa la app para subir de nivel
-              </Text>
-            </View>
+      {/* Estadísticas rápidas */}
+      <View style={styles.statsSection}>
+        <View style={styles.statItem}>
+          <Text style={styles.statNumber}>{userData.matchesPlayed}</Text>
+          <Text style={styles.statLabel}>Partidos</Text>
+        </View>
+        <View style={styles.statDivider} />
+        <View style={styles.statItem}>
+          <Text style={styles.statNumber}>{userData.wins}</Text>
+          <Text style={styles.statLabel}>Victorias</Text>
+        </View>
+        <View style={styles.statDivider} />
+        <View style={styles.statItem}>
+          <Text style={styles.statNumber}>
+            {userData.matchesPlayed > 0 
+              ? Math.round((userData.wins / userData.matchesPlayed) * 100)
+              : 0}%
+          </Text>
+          <Text style={styles.statLabel}>Win Rate</Text>
+        </View>
+      </View>
 
-            {/* Estadísticas rápidas */}
-            <View style={styles.statsSection}>
-              <View style={styles.statItem}>
-                <Text style={styles.statNumber}>{userData.matchesPlayed}</Text>
-                <Text style={styles.statLabel}>Partidos</Text>
-              </View>
-              <View style={styles.statDivider} />
-              <View style={styles.statItem}>
-                <Text style={styles.statNumber}>{userData.wins}</Text>
-                <Text style={styles.statLabel}>Victorias</Text>
-              </View>
-              <View style={styles.statDivider} />
-              <View style={styles.statItem}>
-              <Text style={styles.statNumber}>
-              {userData.matchesPlayed > 0 
-               ? Math.round((userData.wins / userData.matchesPlayed) * 100):0}%
-              </Text>
-             <Text style={styles.statLabel}>Win Rate</Text>
-            </View>
-            </View>
+      {/* Opciones del menú */}
+      <View style={styles.menuOptions}>
 
-            {/* Opciones del menú */}
-            <View style={styles.menuOptions}>
-              
-
-              <TouchableOpacity 
-                style={styles.menuOption}
-                onPress={handleEditProfile}
-              >
-                <Text style={styles.menuOptionIcon}>✏️</Text>
-                <Text style={styles.menuOptionText}>Editar Perfil</Text>
-                <Text style={styles.menuOptionArrow}>›</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity 
-                style={styles.menuOption}
-                onPress={handleViewLevel}
-              >
-                <Text style={styles.menuOptionIcon}>⭐</Text>
-                <Text style={styles.menuOptionText}>Mi Nivel</Text>
-                <Text style={styles.menuOptionArrow}>›</Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* Botón de cerrar sesión */}
-            <TouchableOpacity 
-              style={styles.closeButton}
-              onPress={handleLogout}
-            >
-              <Text style={styles.closeButtonText}>Cerrar Sesión</Text>
-            </TouchableOpacity>
-          </Animated.View>
+        <TouchableOpacity 
+          style={styles.menuOption}
+          onPress={handleEditProfile}
+        >
+          <Text style={styles.menuOptionIcon}>✏</Text>
+          <Text style={styles.menuOptionText}>Editar Perfil</Text>
+          <Text style={styles.menuOptionArrow}>›</Text>
         </TouchableOpacity>
-      </Modal>
+
+        <TouchableOpacity 
+          style={styles.menuOption}
+          onPress={async () => {
+            setShowUserMenu(false);
+            try {
+              await Linking.openSettings();
+              console.log("⚙ Abriendo configuraciones del dispositivo...");
+            } catch (error) {
+              console.error("❌ No se pudo abrir Configuración:", error);
+            }
+          }}
+        >
+          <Text style={styles.menuOptionIcon}>⚙</Text>
+          <Text style={styles.menuOptionText}>Configuraciones</Text>
+          <Text style={styles.menuOptionArrow}>›</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Botón de cerrar sesión */}
+      <TouchableOpacity 
+        style={styles.closeButton}
+        onPress={handleLogout}
+      >
+        <Text style={styles.closeButtonText}>Cerrar Sesión</Text>
+      </TouchableOpacity>
+    </Animated.View>
+  </TouchableOpacity>
+</Modal>
+
 
       {/* Barra de navegación inferior */}
       <View style={styles.tabBar}>
@@ -811,7 +826,7 @@ Responde de forma estructurada con bullets cuando sea necesario y mantén las re
               activeTab === "ranking" && styles.tabIconActive,
             ]}
           >
-            🏆
+            👥
           </Text>
           <Text
             style={[
@@ -819,7 +834,7 @@ Responde de forma estructurada con bullets cuando sea necesario y mantén las re
               activeTab === "ranking" && styles.tabLabelActive,
             ]}
           >
-            Ranking
+            Amigos
           </Text>
         </TouchableOpacity>
 

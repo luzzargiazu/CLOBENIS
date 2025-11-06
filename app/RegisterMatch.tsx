@@ -1,10 +1,18 @@
-import React, { useState } from "react";
-import { View, Text, TouchableOpacity, StyleSheet, Alert } from "react-native";
+import * as React from "react";
+import { useState } from "react";
+import { View, Text, Alert, TouchableWithoutFeedback, Dimensions, StyleSheet } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { auth, db } from "../firebase";
 import { doc, updateDoc, getDoc } from "firebase/firestore";
 import { useRouter } from "expo-router";
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+} from "react-native-reanimated";
+
+const { width } = Dimensions.get("window");
 
 export default function RegisterMatch() {
   const router = useRouter();
@@ -29,13 +37,10 @@ export default function RegisterMatch() {
       }
 
       const userData = userSnap.data();
-
-      // ⚙️ Aseguramos que los campos existan
       const matchesPlayed = (userData.matchesPlayed || 0) + 1;
       const wins = result === "win" ? (userData.wins || 0) + 1 : userData.wins || 0;
-      const loses = result === "loss" ? (userData.loses || 0) + 1 : (userData.loses || 0);
+      const loses = result === "loss" ? (userData.loses || 0) + 1 : userData.loses || 0;
 
-      // 🧮 Experiencia y nivel
       const xpGained = result === "win" ? 50 : 20;
       let xp = (userData.xp || 0) + xpGained;
       let level = userData.level || 1;
@@ -47,11 +52,10 @@ export default function RegisterMatch() {
         xpToNextLevel += 50;
       }
 
-      // 💾 Guardamos también las fechas de actualización
       await updateDoc(userRef, {
         matchesPlayed,
         wins,
-        loses, // 👈 ahora siempre se guarda
+        loses,
         xp,
         level,
         xpToNextLevel,
@@ -74,36 +78,56 @@ export default function RegisterMatch() {
     }
   };
 
+  // ⚡ Componente de botón animado
+  const AnimatedButton = ({ label, colors, icon, onPress }: any) => {
+    const scale = useSharedValue(1);
+    const animatedStyle = useAnimatedStyle(() => ({
+      transform: [{ scale: scale.value }],
+    }));
+
+    return (
+      <TouchableWithoutFeedback
+        onPressIn={() => (scale.value = withSpring(0.95))}
+        onPressOut={() => (scale.value = withSpring(1))}
+        onPress={onPress}
+        disabled={loading}
+      >
+        <Animated.View style={[styles.resultButton, animatedStyle]}>
+          <LinearGradient colors={colors} style={styles.gradient}>
+            <Ionicons name={icon} size={22} color="#fff" />
+            <Text style={styles.buttonText}>{label}</Text>
+          </LinearGradient>
+        </Animated.View>
+      </TouchableWithoutFeedback>
+    );
+  };
+
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Registrar Partido</Text>
-      <Text style={styles.subtitle}>¿Cómo fue tu último partido?</Text>
+      <View style={styles.header}>
+        <Text style={styles.title}>Registrar Partido</Text>
+        <Text style={styles.subtitle}>¿Cómo fue tu último partido?</Text>
+      </View>
 
-      <TouchableOpacity
-        style={styles.button}
-        disabled={loading}
+      <AnimatedButton
+        label="Gané el partido"
+        colors={["#48B3AF", "#85cf75"]}
+        icon="trophy-outline"
         onPress={() => handleRegisterMatch("win")}
-      >
-        <LinearGradient colors={["#48B3AF", "#85cf75"]} style={styles.gradient}>
-          <Ionicons name="trophy-outline" size={22} color="#fff" />
-          <Text style={styles.buttonText}>Gané el partido</Text>
-        </LinearGradient>
-      </TouchableOpacity>
+      />
 
-      <TouchableOpacity
-        style={styles.button}
-        disabled={loading}
+      <AnimatedButton
+        label="Perdí el partido"
+        colors={["#ff6666", "#ff9966"]}
+        icon="close-circle-outline"
         onPress={() => handleRegisterMatch("loss")}
-      >
-        <LinearGradient colors={["#ff6666", "#ff9966"]} style={styles.gradient}>
-          <Ionicons name="close-circle-outline" size={22} color="#fff" />
-          <Text style={styles.buttonText}>Perdí el partido</Text>
-        </LinearGradient>
-      </TouchableOpacity>
+      />
 
-      <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-        <Text style={styles.backText}>⬅ Volver</Text>
-      </TouchableOpacity>
+      <TouchableWithoutFeedback onPress={() => router.back()}>
+        <View style={styles.backButton}>
+          <Text style={styles.backText}>Volver</Text>
+        </View>
+      </TouchableWithoutFeedback>
     </View>
   );
 }
@@ -111,44 +135,67 @@ export default function RegisterMatch() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f4f6f8",
+    backgroundColor: "#f5f5f5",
     justifyContent: "center",
     alignItems: "center",
-    padding: 24,
+    paddingHorizontal: 24,
+  },
+  header: {
+    alignItems: "center",
+    marginBottom: 30,
   },
   title: {
     fontSize: 26,
     fontWeight: "700",
-    marginBottom: 10,
     color: "#333",
+    marginBottom: 6,
   },
   subtitle: {
     fontSize: 16,
-    color: "#555",
-    marginBottom: 30,
+    color: "#666",
   },
-  button: {
-    width: "80%",
+  resultButton: {
+    width: width * 0.8,
+    borderRadius: 20,
+    overflow: "hidden",
     marginVertical: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 5,
   },
   gradient: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 12,
+    paddingVertical: 14,
     borderRadius: 20,
   },
   buttonText: {
     color: "#fff",
     fontSize: 18,
-    fontWeight: "600",
+    fontWeight: "700",
     marginLeft: 8,
+    textShadowColor: "rgba(0,0,0,0.2)",
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 3,
   },
   backButton: {
-    marginTop: 30,
+    marginTop: 40,
+    backgroundColor: "#fff",
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
   },
   backText: {
     fontSize: 16,
     color: "#476EAE",
+    fontWeight: "600",
   },
 });
