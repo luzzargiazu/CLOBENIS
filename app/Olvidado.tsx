@@ -1,6 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
-import Checkbox from "expo-checkbox";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
@@ -12,28 +11,28 @@ import {
   View,
   ActivityIndicator,
 } from "react-native";
-import { signInWithEmailAndPassword } from "firebase/auth";
+import { sendPasswordResetEmail } from "firebase/auth";
 import { auth } from "../firebase";
 import React from "react";
 
-const loginBackground = require("../assets/images/Login.jpg");
+const loginBackground = require("../assets/images/Olvidado.jpg");
 
-export default function LoginScreen() {
+export default function OlvidadoScreen() {
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [remember, setRemember] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
 
   const router = useRouter();
 
-  const handleLogin = async () => {
-    // Resetear mensaje de error
+  const handleResetPassword = async () => {
+    // Resetear mensajes
     setErrorMessage("");
+    setSuccessMessage("");
 
     // Validaciones básicas
-    if (!email || !password) {
-      setErrorMessage("Por favor completa todos los campos");
+    if (!email) {
+      setErrorMessage("Por favor ingresa tu email");
       return;
     }
 
@@ -45,32 +44,28 @@ export default function LoginScreen() {
     setLoading(true);
 
     try {
-      // Iniciar sesión con Firebase
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
-
-      console.log("Usuario autenticado:", user.uid);
-      console.log("Email:", user.email);
-      console.log("Nombre:", user.displayName);
-
-      // Redirigir a la pantalla principal
-      router.replace("/hom");
+      // Enviar email de restablecimiento
+      await sendPasswordResetEmail(auth, email);
+      
+      setSuccessMessage("Se ha enviado un email para restablecer tu contraseña. Revisa tu bandeja de entrada.");
+      setEmail("");
+      
+      // Opcional: redirigir después de 3 segundos
+      setTimeout(() => {
+        router.back();
+      }, 3000);
+      
     } catch (error: any) {
-      console.error("Error al iniciar sesión:", error);
+      console.error("Error al enviar email:", error);
 
-      let errorMsg = "Ocurrió un error al iniciar sesión";
+      let errorMsg = "Ocurrió un error al enviar el email";
 
       switch (error.code) {
-        case "auth/invalid-credential":
         case "auth/user-not-found":
-        case "auth/wrong-password":
-          errorMsg = "Email o contraseña incorrectos";
+          errorMsg = "No existe una cuenta con este email";
           break;
         case "auth/invalid-email":
           errorMsg = "El email no es válido";
-          break;
-        case "auth/user-disabled":
-          errorMsg = "Esta cuenta ha sido deshabilitada";
           break;
         case "auth/too-many-requests":
           errorMsg = "Demasiados intentos. Intenta más tarde";
@@ -80,6 +75,7 @@ export default function LoginScreen() {
       }
 
       setErrorMessage(errorMsg);
+    } finally {
       setLoading(false);
     }
   };
@@ -92,13 +88,33 @@ export default function LoginScreen() {
     >
       <BlurView intensity={5} tint="dark" style={styles.blurOverlay}>
         <View style={styles.wrapper}>
-          <Text style={styles.title}>Login</Text>
+          {/* Botón volver */}
+          <TouchableOpacity 
+            style={styles.backButton} 
+            onPress={() => router.back()}
+            disabled={loading}
+          >
+            <Ionicons name="arrow-back" size={24} color="#fff" />
+          </TouchableOpacity>
+
+          <Text style={styles.title}>Restablecer Contraseña</Text>
+          <Text style={styles.subtitle}>
+            Ingresa tu email y te enviaremos un enlace para restablecer tu contraseña
+          </Text>
 
           {/* Mensaje de error */}
           {errorMessage ? (
             <View style={styles.errorBox}>
               <Ionicons name="alert-circle" size={20} color="#fff" />
               <Text style={styles.errorText}>{errorMessage}</Text>
+            </View>
+          ) : null}
+
+          {/* Mensaje de éxito */}
+          {successMessage ? (
+            <View style={styles.successBox}>
+              <Ionicons name="checkmark-circle" size={20} color="#fff" />
+              <Text style={styles.successText}>{successMessage}</Text>
             </View>
           ) : null}
 
@@ -112,6 +128,7 @@ export default function LoginScreen() {
               onChangeText={(text) => {
                 setEmail(text);
                 setErrorMessage("");
+                setSuccessMessage("");
               }}
               keyboardType="email-address"
               autoCapitalize="none"
@@ -125,72 +142,31 @@ export default function LoginScreen() {
             />
           </View>
 
-          {/* Contraseña */}
-          <View style={styles.inputBox}>
-            <TextInput
-              style={styles.input}
-              placeholder="Contraseña"
-              placeholderTextColor="#fff"
-              secureTextEntry
-              value={password}
-              onChangeText={(text) => {
-                setPassword(text);
-                setErrorMessage("");
-              }}
-              editable={!loading}
-            />
-            <Ionicons
-              name="lock-closed-outline"
-              size={24}
-              color="#fff"
-              style={styles.icon}
-            />
-          </View>
-
-          {/* Remember / Forgot */}
-          <View style={styles.rememberForgot}>
-            <View style={styles.rememberRow}>
-              <Checkbox
-                value={remember}
-                onValueChange={setRemember}
-                color={remember ? "#fff" : undefined}
-                disabled={loading}
-              />
-              <Text style={styles.rememberText}>Recuerdame</Text>
-            </View>
-
-            <TouchableOpacity 
-                disabled={loading}
-                onPress={() => !loading && router.push("/Olvidado")}>
-                <Text style={styles.link}>Olvidaste tu contraseña?</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Botón Login */}
+          {/* Botón Enviar */}
           <TouchableOpacity
             style={[styles.btn, loading && styles.btnDisabled]}
-            onPress={handleLogin}
+            onPress={handleResetPassword}
             disabled={loading}
           >
             {loading ? (
               <View style={styles.loadingContainer}>
                 <ActivityIndicator color="#333" />
-                <Text style={styles.btnText}>Iniciando sesión...</Text>
+                <Text style={styles.btnText}>Enviando...</Text>
               </View>
             ) : (
-              <Text style={styles.btnText}>Login</Text>
+              <Text style={styles.btnText}>Enviar Enlace</Text>
             )}
           </TouchableOpacity>
 
-          {/* Register */}
+          {/* Volver a Login */}
           <View style={styles.registerLink}>
             <Text style={styles.registerText}>
-              No tienes una cuenta?{" "}
+              Ya tienes una cuenta?{" "}
               <Text
                 style={styles.link}
-                onPress={() => !loading && router.push("/register")}
+                onPress={() => !loading && router.back()}
               >
-                Registrate
+                Inicia sesión
               </Text>
             </Text>
           </View>
@@ -222,13 +198,28 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowOffset: { width: 0, height: 4 },
     shadowRadius: 10,
+    position: "relative",
+  },
+  backButton: {
+    position: "absolute",
+    top: 16,
+    left: 16,
+    zIndex: 10,
   },
   title: {
-    fontSize: 30,
+    fontSize: 26,
     color: "#fff",
     textAlign: "center",
     fontWeight: "700",
+    marginBottom: 12,
+    marginTop: 20,
+  },
+  subtitle: {
+    fontSize: 14,
+    color: "rgba(255, 255, 255, 0.8)",
+    textAlign: "center",
     marginBottom: 20,
+    lineHeight: 20,
   },
   errorBox: {
     width: "100%",
@@ -246,6 +237,24 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 14,
     flex: 1,
+  },
+  successBox: {
+    width: "100%",
+    backgroundColor: "rgba(76, 175, 80, 0.2)",
+    borderWidth: 1,
+    borderColor: "rgba(76, 175, 80, 0.5)",
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 16,
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
+  },
+  successText: {
+    color: "#fff",
+    fontSize: 14,
+    flex: 1,
+    lineHeight: 20,
   },
   inputBox: {
     width: "100%",
@@ -270,25 +279,6 @@ const styles = StyleSheet.create({
     right: 16,
     top: 13,
   },
-  rememberForgot: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginTop: 4,
-    marginBottom: 16,
-  },
-  rememberRow: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  rememberText: {
-    color: "#fff",
-    marginLeft: 6,
-  },
-  link: {
-    color: "#fff",
-    textDecorationLine: "underline",
-  },
   btn: {
     width: "100%",
     height: 45,
@@ -296,6 +286,7 @@ const styles = StyleSheet.create({
     borderRadius: 40,
     justifyContent: "center",
     alignItems: "center",
+    marginTop: 10,
   },
   btnDisabled: {
     opacity: 0.7,
@@ -316,5 +307,9 @@ const styles = StyleSheet.create({
   },
   registerText: {
     color: "#fff",
+  },
+  link: {
+    color: "#fff",
+    textDecorationLine: "underline",
   },
 });
