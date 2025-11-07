@@ -161,7 +161,7 @@ export default function LoginScreen() {
 
             <TouchableOpacity 
                 disabled={loading}
-                onPress={() => !loading && router.push("/Olvidado")}>
+                onPress={() => !loading && router.push("./Olvidado")}>
                 <Text style={styles.link}>Olvidaste tu contraseña?</Text>
             </TouchableOpacity>
           </View>

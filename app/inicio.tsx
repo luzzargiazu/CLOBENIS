@@ -347,7 +347,7 @@ Responde de forma estructurada con bullets cuando sea necesario y mantén las re
   const handleEditProfile = () => {
     setShowUserMenu(false);
     console.log("Editar perfil");
-    router.push("/editperfil");  
+    router.push("./editperfil");  
   };
 
   const handleOpenSettings = async () => {
