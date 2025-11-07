@@ -29,13 +29,7 @@ export const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#333",
   },
-  profileButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    overflow: "visible",
-    position: "relative",
-  },
+ 
   profileGradient: {
     width: "100%",
     height: "100%",
@@ -513,5 +507,118 @@ registerMatchText: {
   fontWeight: "600",
   marginLeft: 8,
 },
+userHeader: {
+  width: "100%",
+  alignItems: "center",
+  justifyContent: "center",
+  paddingVertical: 35,
+  borderBottomLeftRadius: 30,
+  borderBottomRightRadius: 30,
+},
+
+userImage: {
+  width: 90,
+  height: 90,
+  borderRadius: 45,
+  borderWidth: 2,
+  borderColor: "#fff",
+  marginBottom: 8,
+},
+
+userInitialCircle: {
+  width: 90,
+  height: 90,
+  borderRadius: 45,
+  alignItems: "center",
+  justifyContent: "center",
+  backgroundColor: "rgba(255,255,255,0.2)",
+  borderWidth: 2,
+  borderColor: "#fff",
+  marginBottom: 8,
+},
+
+userInitialText: {
+  color: "#fff",
+  fontSize: 36,
+  fontWeight: "600",
+},
+
+userName: {
+  color: "#fff",
+  fontSize: 18,
+  fontWeight: "600",
+  marginTop: 4,
+},
+
+userSince: {
+  color: "#f0f0f0",
+  fontSize: 13,
+  marginTop: 2,
+},
+profileImage: {
+  width: 40,
+  height: 40,
+  borderRadius: 20,
+  borderWidth: 2,
+  borderColor: "#476EAE",
+},
+/* Inicial del usuario (cuando NO tiene foto) */
+profileInitial: {               // <--- estilo para el círculo de la inicial
+  width: 40,
+  height: 40,
+  borderRadius: 20,
+  alignItems: "center",
+  justifyContent: "center",
+  borderWidth: 2,
+  borderColor: "#476EAE",
+  backgroundColor: "transparent", // si usás LinearGradient no hace falta, pero lo dejo por si lo usás sin gradiente
+},
+userStats: {
+  alignItems: "center",
+  marginTop: 20,
+  marginBottom: 30,
+  paddingVertical: 10,
+  paddingHorizontal: 16,
+  borderRadius: 20,
+  backgroundColor: "rgba(255, 255, 255, 0.15)",
+  width: "90%",
+},
+
+/* Nivel y experiencia del usuario */
+userLevel: {
+  fontSize: 16,
+  fontWeight: "bold",
+  color: "#fff",
+  marginBottom: 4,
+},
+profileButton: {
+  width: 45,
+  height: 45,
+  borderRadius: 22.5,
+  overflow: 'hidden',
+  elevation: 3,
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.2,
+  shadowRadius: 3,
+},
+
+
+
+
+// Estilos para el menú lateral (modal)
+
+userMenuAvatarPlaceholder: {
+  width: 80,
+  height: 80,
+  borderRadius: 40,
+  backgroundColor: 'rgba(255, 255, 255, 0.3)',
+  justifyContent: 'center',
+  alignItems: 'center',
+  borderWidth: 3,
+  borderColor: '#fff',
+  marginBottom: 12,
+},
+
 
 });

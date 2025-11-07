@@ -1,3 +1,7 @@
+// ==========================================
+// 📄 ARCHIVO COMPLETO: inicio.tsx
+// ==========================================
+
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { LinearGradient } from "expo-linear-gradient";
 import { useEffect, useRef, useState } from "react";
@@ -25,20 +29,15 @@ import { styles } from './inicio.styles';
 import TennisCourtMap from './maps';
 import Amigos from "./Amigos";
 import React from "react";
-// 🔥 IMPORTS PARA FIREBASE AUTH
 import { auth } from '../firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { useRouter } from 'expo-router';
 
 const { width } = Dimensions.get("window");
 
-// Inicializa la IA con tu API key
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-
-// Logo
 const logoImage = require("../assets/images/logo.png");
 
-// Tipos para el chatbot
 interface Message {
   id: number;
   text: string;
@@ -53,11 +52,9 @@ export default function InicioScreen() {
   const scrollX = useRef(new Animated.Value(0)).current;
   const scrollViewRef = useRef<ScrollView>(null);
   
-  // Estado del menú de usuario
   const [showUserMenu, setShowUserMenu] = useState(false);
   const slideAnim = useRef(new Animated.Value(300)).current;
   
-  // Datos del usuario
   const [userData, setUserData] = useState({
     name: "Usuario",
     initials: "U",
@@ -68,9 +65,9 @@ export default function InicioScreen() {
     matchesPlayed: 0,
     wins: 0,
     loses: 0,
+    photo: null,
   });
   
-  // Estados del chatbot
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 1,
@@ -83,7 +80,6 @@ export default function InicioScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const chatScrollRef = useRef<ScrollView>(null);
 
-  // Datos de noticias
   const newsItems: {
     id: number;
     title: string;
@@ -110,79 +106,69 @@ export default function InicioScreen() {
     },
   ];
 
-  // 🔥 Cargar datos del usuario autenticado
- // 🔥 Cargar datos del usuario autenticado desde Firestore
-useEffect(() => {
-  let unsubscribeFirestore: (() => void) | undefined;
+  useEffect(() => {
+    let unsubscribeFirestore: (() => void) | undefined;
 
-  const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
-    if (user) {
-      try {
-        // 📌 LISTENER EN TIEMPO REAL - Se actualiza automáticamente
-        const userDocRef = doc(db, "users", user.uid);
-        
-        // onSnapshot escucha cambios en tiempo real
-        unsubscribeFirestore = onSnapshot(userDocRef, (docSnap: { exists: () => any; data: () => any; }) => {
-          if (docSnap.exists()) {
-            const userData = docSnap.data();
-            const displayName = user.displayName || userData.username || "Usuario";
-            const initials = displayName
-              .split(" ")
-              .map((word: string) => word.charAt(0).toUpperCase())
-              .slice(0, 2)
-              .join("");
-            
-            // Calcular la fecha de registro
-            const createdDate = userData.createdAt 
-              ? new Date(userData.createdAt).toLocaleDateString('es-ES', { 
-                  year: 'numeric', 
-                  month: 'long' 
-                })
-              : "Enero 2024";
-            
-            // ✅ Actualiza el estado cada vez que cambian los datos
-            setUserData({
-              name: displayName,
-              initials: initials || "U",
-              level: userData.level || 1,
-              xp: userData.xp || 0,
-              xpToNextLevel: userData.xpToNextLevel || 100,
-              memberSince: createdDate,
-              matchesPlayed: userData.matchesPlayed || 0,
-              wins: userData.wins || 0,
-              loses: userData.loses || 0,
-            });
-            
-            console.log("✅ Datos del usuario actualizados desde Firestore:", displayName);
-          } else {
-            console.log("⚠ No se encontraron datos del usuario en Firestore");
-          }
-        }, (error: any) => {
-          console.error("❌ Error al escuchar cambios del usuario:", error);
-        });
-        
-      } catch (error) {
-        console.error("❌ Error al configurar listener:", error);
+    const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        try {
+          const userDocRef = doc(db, "users", user.uid);
+          
+          unsubscribeFirestore = onSnapshot(userDocRef, (docSnap: { exists: () => any; data: () => any; }) => {
+            if (docSnap.exists()) {
+              const userData = docSnap.data();
+              const displayName = user.displayName || userData.username || "Usuario";
+              const initials = displayName
+                .split(" ")
+                .map((word: string) => word.charAt(0).toUpperCase())
+                .slice(0, 2)
+                .join("");
+              
+              const createdDate = userData.createdAt 
+                ? new Date(userData.createdAt).toLocaleDateString('es-ES', { 
+                    year: 'numeric', 
+                    month: 'long' 
+                  })
+                : "Enero 2024";
+              
+              setUserData({
+                name: displayName,
+                initials: initials || "U",
+                level: userData.level || 1,
+                xp: userData.xp || 0,
+                xpToNextLevel: userData.xpToNextLevel || 100,
+                memberSince: createdDate,
+                matchesPlayed: userData.matchesPlayed || 0,
+                wins: userData.wins || 0,
+                loses: userData.loses || 0,
+                photo: userData.photo|| null,
+              });
+            } else {
+              console.log("⚠ No se encontraron datos del usuario en Firestore");
+            }
+          }, (error: any) => {
+            console.error("❌ Error al escuchar cambios del usuario:", error);
+          });
+          
+        } catch (error) {
+          console.error("❌ Error al configurar listener:", error);
+        }
+      } else {
+        console.log("⚠ No hay usuario autenticado");
+        if (unsubscribeFirestore) {
+          unsubscribeFirestore();
+        }
       }
-    } else {
-      console.log("⚠ No hay usuario autenticado");
-      // Limpia el listener si no hay usuario
+    });
+
+    return () => {
+      unsubscribeAuth();
       if (unsubscribeFirestore) {
         unsubscribeFirestore();
       }
-    }
-  });
+    };
+  }, []);
 
-  // 🧹 Limpieza: cancela ambos listeners cuando el componente se desmonte
-  return () => {
-    unsubscribeAuth();
-    if (unsubscribeFirestore) {
-      unsubscribeFirestore();
-    }
-  };
-}, []);
-
-  // Auto-scroll cada 5 segundos
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentNewsIndex((prev) => {
@@ -198,7 +184,6 @@ useEffect(() => {
     return () => clearInterval(interval);
   }, []);
 
-  // Animación del menú de usuario
   useEffect(() => {
     if (showUserMenu) {
       Animated.spring(slideAnim, {
@@ -216,24 +201,22 @@ useEffect(() => {
     }
   }, [showUserMenu]);
 
-  // Datos de ejemplo para el feed
   const feedItems = [
     { id: 1, user: "Carlos M.", action: "ganó un partido", time: "Hace 2h" },
     { id: 2, user: "Ana L.", action: "reservó una cancha", time: "Hace 4h" },
     { id: 3, user: "Miguel R.", action: "subió de nivel", time: "Hace 6h" },
   ];
 
-  // 🤖 Función para llamar a Gemini API
   const callGeminiAPI = async (userMessage: string): Promise<string> => {
     if (!GEMINI_API_KEY) {
       console.error("❌ ERROR: API Key no encontrada");
-      return "⚠ Error de configuración: No se encontró la clave API de Gemini.";
+      return "⚠️ Error de configuración: No se encontró la clave API de Gemini.";
     }
 
     console.log("📡 Enviando mensaje a Gemini...");
     
     try {
-      const url = 'https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}';
+      const url = `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
       console.log("🌐 URL construida correctamente");
       
       const response = await fetch(url, {
@@ -296,7 +279,6 @@ Responde de forma estructurada con bullets cuando sea necesario y mantén las re
     }
   };
 
-  // 🤖 Enviar mensaje
   const sendMessage = async () => {
     if (inputText.trim() === "" || isLoading) return;
 
@@ -346,7 +328,6 @@ Responde de forma estructurada con bullets cuando sea necesario y mantén las re
     }
   };
 
-  // Sugerencias rápidas
   const quickSuggestions = [
     "Cómo mejorar mi derecha",
     "Nutrición antes del partido",
@@ -358,31 +339,27 @@ Responde de forma estructurada con bullets cuando sea necesario y mantén las re
     setInputText(suggestion);
   };
 
-  // Funciones del menú de usuario
   const handleViewProfile = () => {
     setShowUserMenu(false);
     console.log("Ver perfil");
   };
 
-const handleEditProfile = () => {
-  setShowUserMenu(false);
-  console.log("Editar perfil");
-  router.push("/editperfil");  
-};
+  const handleEditProfile = () => {
+    setShowUserMenu(false);
+    console.log("Editar perfil");
+    router.push("/editperfil");  
+  };
 
+  const handleOpenSettings = async () => {
+    setShowUserMenu(false);
+    try {
+      await Linking.openSettings();
+      console.log("⚙ Abriendo configuraciones del dispositivo...");
+    } catch (error) {
+      console.error("❌ No se pudo abrir Configuración:", error);
+    }
+  };
 
-const handleOpenSettings = async () => {
-  setShowUserMenu(false);
-  try {
-    // Abre la configuración del sistema (Android / iOS)
-    await Linking.openSettings();
-    console.log("⚙ Abriendo configuraciones del dispositivo...");
-  } catch (error) {
-    console.error("❌ No se pudo abrir Configuración:", error);
-  }
-};
-
-  // 🔥 Función para cerrar sesión
   const handleLogout = async () => {
     try {
       await signOut(auth);
@@ -400,7 +377,6 @@ const handleOpenSettings = async () => {
           <ScrollView style={styles.feedContainer}>
             <Text style={styles.sectionTitle}>Noticias</Text>
             
-            {/* Carrusel de Noticias */}
             <View style={styles.newsCarouselContainer}>
               <ScrollView
                 ref={scrollViewRef}
@@ -438,7 +414,6 @@ const handleOpenSettings = async () => {
                 ))}
               </ScrollView>
               
-              {/* Indicadores de puntos */}
               <View style={styles.dotsContainer}>
                 {newsItems.map((_, index) => (
                   <View
@@ -471,25 +446,25 @@ const handleOpenSettings = async () => {
           </ScrollView>
         );
       case "buscar":
-  return <TennisCourtMap />;
+        return <TennisCourtMap />;
       case "partidos":
-  return (
-    <View style={styles.centerContent}>
-      <Text style={styles.comingSoon}>🎾</Text>
-      <Text style={styles.comingSoonText}>Tus próximos partidos</Text>
+        return (
+          <View style={styles.centerContent}>
+            <Text style={styles.comingSoon}>🎾</Text>
+            <Text style={styles.comingSoonText}>Tus próximos partidos</Text>
 
-      <TouchableOpacity
-        style={styles.registerMatchButton}
-        onPress={() => router.push("/RegisterMatch")}
-      >
-        <Ionicons name="tennisball-outline" size={22} color="#fff" />
-        <Text style={styles.registerMatchText}>Registrar Partido</Text>
-      </TouchableOpacity>
-    </View>
-  );
+            <TouchableOpacity
+              style={styles.registerMatchButton}
+              onPress={() => router.push("/RegisterMatch")}
+            >
+              <Ionicons name="tennisball-outline" size={22} color="#fff" />
+              <Text style={styles.registerMatchText}>Registrar Partido</Text>
+            </TouchableOpacity>
+          </View>
+        );
 
       case "ranking":
-         return <Amigos />;
+        return <Amigos />;
         
       case "perfil":
         return (
@@ -498,7 +473,6 @@ const handleOpenSettings = async () => {
             style={styles.chatContainer}
             keyboardVerticalOffset={100}
           >
-            {/* Mensajes del chat */}
             <ScrollView
               ref={chatScrollRef}
               style={styles.messagesContainer}
@@ -539,7 +513,6 @@ const handleOpenSettings = async () => {
                 </View>
               ))}
               
-              {/* Indicador de carga */}
               {isLoading && (
                 <View style={styles.loadingContainer}>
                   <ActivityIndicator size="small" color="#476EAE" />
@@ -548,7 +521,6 @@ const handleOpenSettings = async () => {
               )}
             </ScrollView>
 
-            {/* Sugerencias rápidas */}
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -566,7 +538,6 @@ const handleOpenSettings = async () => {
               ))}
             </ScrollView>
 
-            {/* Input de mensaje */}
             <View style={styles.inputContainer}>
               <TextInput
                 style={styles.textInput}
@@ -599,7 +570,7 @@ const handleOpenSettings = async () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header */}
+      {/* ✅ HEADER CORREGIDO */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <Image 
@@ -609,146 +580,140 @@ const handleOpenSettings = async () => {
           />
           <Text style={styles.greetingText}>Hola, {userData.name}</Text>
         </View>
+        
         <TouchableOpacity 
           style={styles.profileButton}
           onPress={() => setShowUserMenu(!showUserMenu)}
         >
-          <LinearGradient
-            colors={["#476EAE", "#48B3AF"]}
-            style={styles.profileGradient}
-          >
-            <Text style={styles.profileText}>{userData.initials}</Text>
-          </LinearGradient>
-          <View style={styles.levelBadge}>
-            <Text style={styles.levelBadgeText}>{userData.level}</Text>
-          </View>
+          {userData.photo ? (
+            <Image
+              source={{ uri: userData.photo }}
+              style={styles.profileImage}
+            />
+          ) : (
+            <LinearGradient
+              colors={["#476EAE", "#48B3AF"]}
+              style={styles.profileGradient}
+            >
+              <Text style={styles.profileInitial}>{userData.initials}</Text>
+            </LinearGradient>
+          )}
         </TouchableOpacity>
       </View>
 
-      {/* Contenido principal */}
       <View style={styles.mainContent}>{renderContent()}</View>
 
-      {/* Menú desplegable de usuario */}
-<Modal
-  visible={showUserMenu}
-  transparent={true}
-  animationType="none"
-  onRequestClose={() => setShowUserMenu(false)}
->
-  <TouchableOpacity 
-    style={styles.menuOverlay}
-    activeOpacity={1}
-    onPress={() => setShowUserMenu(false)}
-  >
-    <Animated.View 
-      style={[
-        styles.userMenuContainer,
-        {
-          transform: [{ translateX: slideAnim }]
-        }
-      ]}
-    >
-      {/* Header del menú */}
-      <LinearGradient
-        colors={["#476EAE", "#48B3AF"]}
-        style={styles.userMenuHeader}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
+      <Modal
+        visible={showUserMenu}
+        transparent={true}
+        animationType="none"
+        onRequestClose={() => setShowUserMenu(false)}
       >
-        <View style={styles.userMenuAvatar}>
-          <Text style={styles.userMenuAvatarText}>{userData.initials}</Text>
-        </View>
-        <Text style={styles.userMenuName}>{userData.name}</Text>
-        <Text style={styles.userMenuMember}>Miembro desde {userData.memberSince}</Text>
-      </LinearGradient>
-
-      {/* Nivel y XP */}
-      <View style={styles.levelSection}>
-        <View style={styles.levelHeader}>
-          <Text style={styles.levelTitle}>Nivel {userData.level}</Text>
-          <Text style={styles.levelXP}>{userData.xp}/{userData.xpToNextLevel} XP</Text>
-        </View>
-        <View style={styles.progressBarContainer}>
-          <LinearGradient
-            colors={["#476EAE", "#48B3AF"]}
+        <TouchableOpacity 
+          style={styles.menuOverlay}
+          activeOpacity={1}
+          onPress={() => setShowUserMenu(false)}
+        >
+          <Animated.View 
             style={[
-              styles.progressBar,
-              { width: `${(userData.xp / userData.xpToNextLevel) * 100}%` }
+              styles.userMenuContainer,
+              {
+                transform: [{ translateX: slideAnim }]
+              }
             ]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-          />
-        </View>
-        <Text style={styles.levelDescription}>
-          🎾 Juega más partidos y usa la app para subir de nivel
-        </Text>
-      </View>
+          >
+            <LinearGradient
+              colors={["#476EAE", "#48B3AF"]}
+              style={styles.userMenuHeader}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+            >
+              {userData.photo ? (
+                <Image
+                  source={{ uri: userData.photo }}
+                  style={styles.userMenuAvatar}
+                />
+              ) : (
+                <View style={styles.userMenuAvatarPlaceholder}>
+                  <Text style={styles.userMenuAvatarText}>{userData.initials}</Text>
+                </View>
+              )}
+              <Text style={styles.userMenuName}>{userData.name}</Text>
+              <Text style={styles.userMenuMember}>Miembro desde {userData.memberSince}</Text>
+            </LinearGradient>
 
-      {/* Estadísticas rápidas */}
-      <View style={styles.statsSection}>
-        <View style={styles.statItem}>
-          <Text style={styles.statNumber}>{userData.matchesPlayed}</Text>
-          <Text style={styles.statLabel}>Partidos</Text>
-        </View>
-        <View style={styles.statDivider} />
-        <View style={styles.statItem}>
-          <Text style={styles.statNumber}>{userData.wins}</Text>
-          <Text style={styles.statLabel}>Victorias</Text>
-        </View>
-        <View style={styles.statDivider} />
-        <View style={styles.statItem}>
-          <Text style={styles.statNumber}>
-            {userData.matchesPlayed > 0 
-              ? Math.round((userData.wins / userData.matchesPlayed) * 100)
-              : 0}%
-          </Text>
-          <Text style={styles.statLabel}>Win Rate</Text>
-        </View>
-      </View>
+            <View style={styles.levelSection}>
+              <View style={styles.levelHeader}>
+                <Text style={styles.levelTitle}>Nivel {userData.level}</Text>
+                <Text style={styles.levelXP}>{userData.xp}/{userData.xpToNextLevel} XP</Text>
+              </View>
+              <View style={styles.progressBarContainer}>
+                <LinearGradient
+                  colors={["#476EAE", "#48B3AF"]}
+                  style={[
+                    styles.progressBar,
+                    { width: `${(userData.xp / userData.xpToNextLevel) * 100}%` }
+                  ]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                />
+              </View>
+              <Text style={styles.levelDescription}>
+                🎾 Juega más partidos y usa la app para subir de nivel
+              </Text>
+            </View>
 
-      {/* Opciones del menú */}
-      <View style={styles.menuOptions}>
+            <View style={styles.statsSection}>
+              <View style={styles.statItem}>
+                <Text style={styles.statNumber}>{userData.matchesPlayed}</Text>
+                <Text style={styles.statLabel}>Partidos</Text>
+              </View>
+              <View style={styles.statDivider} />
+              <View style={styles.statItem}>
+                <Text style={styles.statNumber}>{userData.wins}</Text>
+                <Text style={styles.statLabel}>Victorias</Text>
+              </View>
+              <View style={styles.statDivider} />
+              <View style={styles.statItem}>
+                <Text style={styles.statNumber}>
+                  {userData.matchesPlayed > 0 
+                    ? Math.round((userData.wins / userData.matchesPlayed) * 100)
+                    : 0}%
+                </Text>
+                <Text style={styles.statLabel}>Win Rate</Text>
+              </View>
+            </View>
 
-        <TouchableOpacity 
-          style={styles.menuOption}
-          onPress={handleEditProfile}
-        >
-          <Text style={styles.menuOptionIcon}>✏</Text>
-          <Text style={styles.menuOptionText}>Editar Perfil</Text>
-          <Text style={styles.menuOptionArrow}>›</Text>
+            <View style={styles.menuOptions}>
+              <TouchableOpacity 
+                style={styles.menuOption}
+                onPress={handleEditProfile}
+              >
+                <Text style={styles.menuOptionIcon}>✏</Text>
+                <Text style={styles.menuOptionText}>Editar Perfil</Text>
+                <Text style={styles.menuOptionArrow}>›</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={styles.menuOption}
+                onPress={handleOpenSettings}
+              >
+                <Text style={styles.menuOptionIcon}>⚙</Text>
+                <Text style={styles.menuOptionText}>Configuraciones</Text>
+                <Text style={styles.menuOptionArrow}>›</Text>
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity 
+              style={styles.closeButton}
+              onPress={handleLogout}
+            >
+              <Text style={styles.closeButtonText}>Cerrar Sesión</Text>
+            </TouchableOpacity>
+          </Animated.View>
         </TouchableOpacity>
+      </Modal>
 
-        <TouchableOpacity 
-          style={styles.menuOption}
-          onPress={async () => {
-            setShowUserMenu(false);
-            try {
-              await Linking.openSettings();
-              console.log("⚙ Abriendo configuraciones del dispositivo...");
-            } catch (error) {
-              console.error("❌ No se pudo abrir Configuración:", error);
-            }
-          }}
-        >
-          <Text style={styles.menuOptionIcon}>⚙</Text>
-          <Text style={styles.menuOptionText}>Configuraciones</Text>
-          <Text style={styles.menuOptionArrow}>›</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Botón de cerrar sesión */}
-      <TouchableOpacity 
-        style={styles.closeButton}
-        onPress={handleLogout}
-      >
-        <Text style={styles.closeButtonText}>Cerrar Sesión</Text>
-      </TouchableOpacity>
-    </Animated.View>
-  </TouchableOpacity>
-</Modal>
-
-
-      {/* Barra de navegación inferior */}
       <View style={styles.tabBar}>
         <TouchableOpacity
           style={styles.tabItem}
