@@ -11,7 +11,6 @@ import {
   View,
   ActivityIndicator,
   ScrollView,
-  Platform,
 } from "react-native";
 import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
@@ -32,11 +31,9 @@ export default function RegisterScreen() {
   const router = useRouter();
 
   const handleRegister = async (): Promise<void> => {
-    // Resetear mensajes
     setErrorMessage("");
     setSuccessMessage("");
 
-    // Validaciones
     if (!username || !email || !password || !confirmPassword) {
       setErrorMessage("Por favor completa todos los campos");
       return;
@@ -65,33 +62,31 @@ export default function RegisterScreen() {
     setLoading(true);
 
     try {
-      // Crear usuario en Firebase Authentication
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      // Actualizar el perfil con el nombre de usuario
       await updateProfile(user, {
         displayName: username,
       });
 
-      // Guardar datos adicionales en Firestore
-    // Guardar datos adicionales en Firestore con estadísticas iniciales
-     await setDoc(doc(db, "users", user.uid), {
-     username: username,
-     email: email,
-     level: 1,
-     xp: 0,
-     xpToNextLevel: 100,
-     matchesPlayed: 0,
-     wins: 0,
-     loses: 0,
-     createdAt: new Date().toISOString(),
-     updatedAt: new Date().toISOString(),
-});
-      // Mostrar éxito
+      // ✅ CORREGIDO: Ahora guardamos 'name' además de 'username'
+      await setDoc(doc(db, "users", user.uid), {
+        name: username,  // ✅ NUEVO: Campo 'name' para mostrar en solicitudes
+        username: username,
+        email: email,
+        level: 1,
+        xp: 0,
+        xpToNextLevel: 100,
+        matchesPlayed: 0,
+        wins: 0,
+        loses: 0,
+        friends: [],  // ✅ Array de amigos vacío
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      });
+
       setSuccessMessage("¡Cuenta creada exitosamente!");
       
-      // Esperar 1.5 segundos y redirigir
       setTimeout(() => {
         router.replace("/hom");
       }, 1500);
@@ -140,7 +135,6 @@ export default function RegisterScreen() {
           <View style={styles.wrapper}>
             <Text style={styles.title}>Registro</Text>
 
-            {/* Mensaje de error */}
             {errorMessage ? (
               <View style={styles.errorBox}>
                 <Ionicons name="alert-circle" size={20} color="#fff" />
@@ -148,7 +142,6 @@ export default function RegisterScreen() {
               </View>
             ) : null}
 
-            {/* Mensaje de éxito */}
             {successMessage ? (
               <View style={styles.successBox}>
                 <Ionicons name="checkmark-circle" size={20} color="#fff" />
@@ -156,7 +149,6 @@ export default function RegisterScreen() {
               </View>
             ) : null}
 
-            {/* Usuario */}
             <View style={styles.inputBox}>
               <TextInput
                 style={styles.input}
@@ -178,7 +170,6 @@ export default function RegisterScreen() {
               />
             </View>
 
-            {/* Email */}
             <View style={styles.inputBox}>
               <TextInput
                 style={styles.input}
@@ -201,7 +192,6 @@ export default function RegisterScreen() {
               />
             </View>
 
-            {/* Contraseña */}
             <View style={styles.inputBox}>
               <TextInput
                 style={styles.input}
@@ -223,7 +213,6 @@ export default function RegisterScreen() {
               />
             </View>
 
-            {/* Confirmar Contraseña */}
             <View style={styles.inputBox}>
               <TextInput
                 style={styles.input}
@@ -245,7 +234,6 @@ export default function RegisterScreen() {
               />
             </View>
 
-            {/* Botón Registro */}
             <TouchableOpacity
               style={[
                 styles.btn, 
@@ -267,7 +255,6 @@ export default function RegisterScreen() {
               )}
             </TouchableOpacity>
 
-            {/* Login Link */}
             <View style={styles.loginLink}>
               <Text style={styles.loginText}>
                 ¿Ya tienes una cuenta?{" "}
@@ -284,135 +271,25 @@ export default function RegisterScreen() {
 }
 
 const styles = StyleSheet.create({
-  background: {
-    flex: 1,
-    width: "100%",
-    height: "100%",
-  },
-  blurOverlay: {
-    flex: 1,
-  },
-  scrollContainer: {
-    flexGrow: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 20,
-  },
-  wrapper: {
-    width: 340,
-    backgroundColor: "rgba(255, 255, 255, 0.15)",
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.3)",
-    borderRadius: 20,
-    padding: 24,
-    shadowColor: "#000",
-    shadowOpacity: 0.3,
-    shadowOffset: { width: 0, height: 4 },
-    shadowRadius: 10,
-  },
-  title: {
-    fontSize: 30,
-    color: "#fff",
-    textAlign: "center",
-    fontWeight: "700",
-    marginBottom: 20,
-  },
-  errorBox: {
-    width: "100%",
-    backgroundColor: "rgba(244, 67, 54, 0.2)",
-    borderWidth: 1,
-    borderColor: "rgba(244, 67, 54, 0.5)",
-    borderRadius: 10,
-    padding: 12,
-    marginBottom: 16,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  errorText: {
-    color: "#fff",
-    fontSize: 14,
-    flex: 1,
-  },
-  successBox: {
-    width: "100%",
-    backgroundColor: "rgba(76, 175, 80, 0.2)",
-    borderWidth: 1,
-    borderColor: "rgba(76, 175, 80, 0.5)",
-    borderRadius: 10,
-    padding: 12,
-    marginBottom: 16,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  successText: {
-    color: "#fff",
-    fontSize: 14,
-    flex: 1,
-  },
-  inputBox: {
-    width: "100%",
-    height: 50,
-    marginVertical: 8,
-    position: "relative",
-  },
-  input: {
-    width: "100%",
-    height: "100%",
-    backgroundColor: "rgba(255,255,255,0.15)",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.4)",
-    borderRadius: 40,
-    fontSize: 16,
-    color: "#fff",
-    paddingHorizontal: 20,
-    paddingRight: 45,
-  },
-  icon: {
-    position: "absolute",
-    right: 16,
-    top: 13,
-  },
-  btn: {
-    width: "100%",
-    height: 45,
-    backgroundColor: "#fff",
-    borderRadius: 40,
-    justifyContent: "center",
-    alignItems: "center",
-    marginTop: 16,
-  },
-  btnDisabled: {
-    opacity: 0.7,
-  },
-  btnSuccess: {
-    backgroundColor: "#4CAF50",
-  },
-  loadingContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  loadingText: {
-    color: "#333",
-    fontWeight: "600",
-    fontSize: 16,
-  },
-  btnText: {
-    color: "#333",
-    fontWeight: "600",
-    fontSize: 16,
-  },
-  loginLink: {
-    marginTop: 16,
-    alignItems: "center",
-  },
-  loginText: {
-    color: "#fff",
-  },
-  link: {
-    color: "#fff",
-    textDecorationLine: "underline",
-  },
+  background: { flex: 1, width: "100%", height: "100%" },
+  blurOverlay: { flex: 1 },
+  scrollContainer: { flexGrow: 1, alignItems: "center", justifyContent: "center", paddingVertical: 20 },
+  wrapper: { width: 340, backgroundColor: "rgba(255, 255, 255, 0.15)", borderWidth: 1, borderColor: "rgba(255, 255, 255, 0.3)", borderRadius: 20, padding: 24, shadowColor: "#000", shadowOpacity: 0.3, shadowOffset: { width: 0, height: 4 }, shadowRadius: 10 },
+  title: { fontSize: 30, color: "#fff", textAlign: "center", fontWeight: "700", marginBottom: 20 },
+  errorBox: { width: "100%", backgroundColor: "rgba(244, 67, 54, 0.2)", borderWidth: 1, borderColor: "rgba(244, 67, 54, 0.5)", borderRadius: 10, padding: 12, marginBottom: 16, flexDirection: "row", alignItems: "center", gap: 8 },
+  errorText: { color: "#fff", fontSize: 14, flex: 1 },
+  successBox: { width: "100%", backgroundColor: "rgba(76, 175, 80, 0.2)", borderWidth: 1, borderColor: "rgba(76, 175, 80, 0.5)", borderRadius: 10, padding: 12, marginBottom: 16, flexDirection: "row", alignItems: "center", gap: 8 },
+  successText: { color: "#fff", fontSize: 14, flex: 1 },
+  inputBox: { width: "100%", height: 50, marginVertical: 8, position: "relative" },
+  input: { width: "100%", height: "100%", backgroundColor: "rgba(255,255,255,0.15)", borderWidth: 1, borderColor: "rgba(255,255,255,0.4)", borderRadius: 40, fontSize: 16, color: "#fff", paddingHorizontal: 20, paddingRight: 45 },
+  icon: { position: "absolute", right: 16, top: 13 },
+  btn: { width: "100%", height: 45, backgroundColor: "#fff", borderRadius: 40, justifyContent: "center", alignItems: "center", marginTop: 16 },
+  btnDisabled: { opacity: 0.7 },
+  btnSuccess: { backgroundColor: "#4CAF50" },
+  loadingContainer: { flexDirection: "row", alignItems: "center", gap: 8 },
+  loadingText: { color: "#333", fontWeight: "600", fontSize: 16 },
+  btnText: { color: "#333", fontWeight: "600", fontSize: 16 },
+  loginLink: { marginTop: 16, alignItems: "center" },
+  loginText: { color: "#fff" },
+  link: { color: "#fff", textDecorationLine: "underline" },
 });

@@ -1,7 +1,3 @@
-// ==========================================
-// 📄 ARCHIVO COMPLETO: inicio.tsx
-// ==========================================
-
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { LinearGradient } from "expo-linear-gradient";
 import { useEffect, useRef, useState } from "react";

@@ -53,16 +53,28 @@ export default function SolicitudesAmigos() {
         const data = docSnap.data();
         
         // Obtener datos del usuario que envió la solicitud
-        const fromUserDoc = await getDoc(doc(db, "users", data.fromUserId));
-        const fromUserData = fromUserDoc.data();
+        try {
+          const fromUserDoc = await getDoc(doc(db, "users", data.fromUserId));
+          const fromUserData = fromUserDoc.data();
 
-        requestsData.push({
-          id: docSnap.id,
-          fromUserId: data.fromUserId,
-          fromUserName: fromUserData?.name || "Usuario desconocido",
-          fromUserUsername: fromUserData?.username || "usuario",
-          status: data.status,
-        });
+          requestsData.push({
+            id: docSnap.id,
+            fromUserId: data.fromUserId,
+            fromUserName: fromUserData?.name || fromUserData?.displayName || "Usuario",
+            fromUserUsername: fromUserData?.username || "usuario",
+            status: data.status,
+          });
+        } catch (error) {
+          console.error("Error obteniendo datos del usuario:", error);
+          // Agregar solicitud con datos por defecto si hay error
+          requestsData.push({
+            id: docSnap.id,
+            fromUserId: data.fromUserId,
+            fromUserName: "Usuario",
+            fromUserUsername: "usuario",
+            status: data.status,
+          });
+        }
       }
 
       setRequests(requestsData);
@@ -77,6 +89,11 @@ export default function SolicitudesAmigos() {
     if (!currentUserId) return;
 
     try {
+      // Volver a obtener los datos del usuario para asegurar que están actualizados
+      const fromUserDoc = await getDoc(doc(db, "users", request.fromUserId));
+      const fromUserData = fromUserDoc.data();
+      const userName = fromUserData?.name || fromUserData?.displayName || request.fromUserName || "el usuario";
+
       // Actualizar el estado de la solicitud
       await updateDoc(doc(db, "friendRequests", request.id), {
         status: "accepted",
@@ -94,13 +111,13 @@ export default function SolicitudesAmigos() {
         friends: arrayUnion(currentUserId),
       });
 
-      // Opcional: Eliminar la solicitud después de aceptarla
+      // Eliminar la solicitud después de aceptarla
       await deleteDoc(doc(db, "friendRequests", request.id));
 
-      Alert.alert("Éxito", `Ahora eres amigo de ${request.fromUserName}`);
+      Alert.alert("¡Éxito! 🎉", `Ahora eres amigo de ${userName}`);
     } catch (error) {
       console.error("Error aceptando solicitud:", error);
-      Alert.alert("Error", "No se pudo aceptar la solicitud");
+      Alert.alert("Error", "No se pudo aceptar la solicitud. Intenta nuevamente.");
     }
   };
 
@@ -111,7 +128,7 @@ export default function SolicitudesAmigos() {
         status: "rejected",
       });
 
-      // Opcional: Eliminar la solicitud después de rechazarla
+      // Eliminar la solicitud después de rechazarla
       await deleteDoc(doc(db, "friendRequests", request.id));
 
       Alert.alert("Solicitud rechazada");

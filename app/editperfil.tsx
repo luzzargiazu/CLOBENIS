@@ -140,11 +140,13 @@ export default function EditProfile() {
       // ✅ PASO 3: Actualizar Firestore
       const userRef = doc(db, "users", user.uid);
       await updateDoc(userRef, {
+        name: username.trim(),
         username: username.trim(),
         isPrivate,
         photo: photo,
         photoURL: photo,
         updatedAt: new Date().toISOString(),
+
       });
       console.log("✅ Firestore actualizado");
 
