@@ -45,14 +45,19 @@ export default function RegisterMatch() {
       let xp = (userData.xp || 0) + xpGained;
       let level = userData.level || 1;
       let xpToNextLevel = userData.xpToNextLevel || 100;
+      
+      // 🆕 Variable para saber si subió de nivel
+      let leveledUp = false;
 
       if (xp >= xpToNextLevel) {
         level++;
         xp -= xpToNextLevel;
         xpToNextLevel += 50;
+        leveledUp = true; // 👈 Marcamos que subió de nivel
       }
 
-      await updateDoc(userRef, {
+      // 🆕 Preparamos los datos a actualizar
+      const updateData: any = {
         matchesPlayed,
         wins,
         loses,
@@ -60,14 +65,35 @@ export default function RegisterMatch() {
         level,
         xpToNextLevel,
         updatedAt: new Date().toISOString(),
-      });
+      };
 
-      Alert.alert(
-        "✅ Partido registrado",
-        result === "win"
-          ? "¡Felicitaciones por la victoria! +50 XP 🏆"
-          : "Partido registrado como derrota. +20 XP 💪"
-      );
+      // 🆕 Si ganó, guardamos la fecha del último partido ganado
+      if (result === "win") {
+        updateData.lastMatchWon = new Date();
+      }
+
+      // 🆕 Si subió de nivel, guardamos la fecha de subida de nivel
+      if (leveledUp) {
+        updateData.lastLevelUp = new Date();
+      }
+
+      await updateDoc(userRef, updateData);
+
+      // 🆕 Mensaje mejorado si subió de nivel
+      if (leveledUp) {
+        Alert.alert(
+          "🎉 ¡SUBISTE DE NIVEL!",
+          `¡Felicitaciones! Ahora eres nivel ${level}\n\n` +
+          (result === "win" ? "¡Y ganaste el partido! +50 XP 🏆" : "+20 XP por jugar 💪")
+        );
+      } else {
+        Alert.alert(
+          "✅ Partido registrado",
+          result === "win"
+            ? "¡Felicitaciones por la victoria! +50 XP 🏆"
+            : "Partido registrado como derrota. +20 XP 💪"
+        );
+      }
 
       router.back();
     } catch (error) {

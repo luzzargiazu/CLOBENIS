@@ -6,7 +6,12 @@ export default function Layout() {
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="index" />
       <Stack.Screen name="login" />
-      <Stack.Screen name="home" />
+      <Stack.Screen name="hom" />
+      <Stack.Screen name="Amigos" />
+      <Stack.Screen name="Chat" />
+      <Stack.Screen name="Perfil" />
+      <Stack.Screen name="EditarPerfil" />
+      <Stack.Screen name="BuscarAmigos" />
     </Stack>
   );
 }

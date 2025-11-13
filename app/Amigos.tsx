@@ -28,6 +28,7 @@ import {
   deleteDoc,
 } from "firebase/firestore";
 import { db, auth } from "../firebase";
+import { useRouter } from "expo-router";
 
 interface Friend {
   id: string;
@@ -37,7 +38,7 @@ interface Friend {
   matchesPlayed?: number;
   wins?: number;
   loses?: number;
-  photo?: string;  // ✅ NUEVO: Foto de perfil
+  photo?: string;
 }
 
 interface PendingRequest {
@@ -45,11 +46,12 @@ interface PendingRequest {
   fromUserId: string;
   fromUserName: string;
   fromUserUsername: string;
-  fromUserPhoto?: string;  // ✅ NUEVO: Foto de perfil
+  fromUserPhoto?: string;
   status: string;
 }
 
 export default function Amigos() {
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedFriend, setSelectedFriend] = useState<Friend | null>(null);
   const [showFriendModal, setShowFriendModal] = useState(false);
@@ -83,7 +85,7 @@ export default function Amigos() {
             fromUserId: data.fromUserId,
             fromUserName: fromUserData?.name || fromUserData?.displayName || "Usuario",
             fromUserUsername: fromUserData?.username || "usuario",
-            fromUserPhoto: fromUserData?.photo || fromUserData?.photoURL || "",  // ✅ NUEVO: Cargar foto
+            fromUserPhoto: fromUserData?.photo || fromUserData?.photoURL || "",
             status: data.status,
           });
         } catch (error) {
@@ -93,7 +95,7 @@ export default function Amigos() {
             fromUserId: data.fromUserId,
             fromUserName: "Usuario",
             fromUserUsername: "usuario",
-            fromUserPhoto: "",  // ✅ NUEVO
+            fromUserPhoto: "",
             status: data.status,
           });
         }
@@ -129,7 +131,7 @@ export default function Amigos() {
                 matchesPlayed: data.matchesPlayed || 0,
                 wins: data.wins || 0,
                 loses: data.loses || 0,
-                photo: data.photo || data.photoURL || "",  // ✅ NUEVO: Cargar foto
+                photo: data.photo || data.photoURL || "",
               });
             }
           } catch (error) {
@@ -199,7 +201,6 @@ export default function Amigos() {
       }
       const currentUserDoc = await getDoc(doc(db, "users", currentUserId));
       const currentUserData = currentUserDoc.data();
-      
       const currentFriends = currentUserData?.friends || [];
       if (currentFriends.includes(user.id)) {
         Alert.alert("Info", "Ya son amigos");
@@ -212,11 +213,8 @@ export default function Amigos() {
         Alert.alert("Info", "Ya enviaste una solicitud a este usuario");
         return;
       }
-      
-      // ✅ ARREGLADO: Usar username si no hay nombre
       const senderName = currentUserData?.name || currentUserData?.displayName || auth.currentUser?.displayName || currentUserData?.username || "Usuario";
       const senderUsername = currentUserData?.username || "usuario";
-      
       await addDoc(collection(db, "friendRequests"), {
         fromUserId: currentUserId,
         fromUserName: senderName,
@@ -288,6 +286,18 @@ export default function Amigos() {
     ]);
   };
 
+  const handleOpenChat = (friend: Friend) => {
+    router.push({
+      pathname: "/Chat",
+      params: {
+        friendId: friend.id,
+        friendName: friend.name,
+        friendUsername: friend.username,
+        friendPhoto: friend.photo || "",
+      },
+    });
+  };
+
   return (
     <View style={styles.container}>
       <LinearGradient colors={["#476EAE", "#48B3AF"]} style={styles.headerGradient}>
@@ -321,20 +331,26 @@ export default function Amigos() {
           </View>
         ) : filtered.length > 0 ? (
           filtered.map((f) => (
-            <TouchableOpacity key={f.id} style={styles.friendCard} onPress={() => { setSelectedFriend(f); setShowFriendModal(true); }}>
-              {f.photo ? (
-                <Image source={{ uri: f.photo }} style={styles.avatarImage} />
-              ) : (
-                <View style={styles.avatar}>
-                  <Text style={styles.avatarText}>{f.name.charAt(0).toUpperCase()}</Text>
+            <View key={f.id} style={styles.friendCardContainer}>
+              <TouchableOpacity style={styles.friendCard} onPress={() => { setSelectedFriend(f); setShowFriendModal(true); }}>
+                {f.photo ? (
+                  <Image source={{ uri: f.photo }} style={styles.avatarImage} />
+                ) : (
+                  <View style={styles.avatar}>
+                    <Text style={styles.avatarText}>{f.name.charAt(0).toUpperCase()}</Text>
+                  </View>
+                )}
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.friendName}>{f.name}</Text>
+                  <Text style={styles.friendUsername}>@{f.username}</Text>
                 </View>
-              )}
-              <View style={{ flex: 1 }}>
-                <Text style={styles.friendName}>{f.name}</Text>
-                <Text style={styles.friendUsername}>@{f.username}</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={20} color="#999" />
-            </TouchableOpacity>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.chatButton} onPress={() => handleOpenChat(f)}>
+                <LinearGradient colors={["#476EAE", "#48B3AF"]} style={styles.chatButtonGradient}>
+                  <Ionicons name="chatbubble" size={20} color="#fff" />
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
           ))
         ) : (
           <View style={styles.emptyState}>
@@ -472,7 +488,10 @@ const styles = StyleSheet.create({
   searchBar: { flexDirection: "row", alignItems: "center", backgroundColor: "#fff", marginHorizontal: 20, marginTop: 10, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8, shadowColor: "#000", shadowOpacity: 0.1, shadowOffset: { width: 0, height: 3 }, shadowRadius: 5, elevation: 3 },
   searchInput: { flex: 1, marginLeft: 8, fontSize: 16, color: "#333" },
   listContainer: { padding: 20 },
-  friendCard: { flexDirection: "row", alignItems: "center", backgroundColor: "#fff", borderRadius: 16, padding: 16, marginBottom: 12, shadowColor: "#000", shadowOpacity: 0.05, shadowOffset: { width: 0, height: 2 }, shadowRadius: 4, elevation: 2 },
+  friendCardContainer: { position: "relative", marginBottom: 12 },
+  friendCard: { flexDirection: "row", alignItems: "center", backgroundColor: "#fff", borderRadius: 16, padding: 16, shadowColor: "#000", shadowOpacity: 0.05, shadowOffset: { width: 0, height: 2 }, shadowRadius: 4, elevation: 2 },
+  chatButton: { position: "absolute", right: 16, top: "50%", marginTop: -22 },
+  chatButtonGradient: { width: 44, height: 44, borderRadius: 22, justifyContent: "center", alignItems: "center", shadowColor: "#000", shadowOpacity: 0.2, shadowOffset: { width: 0, height: 2 }, shadowRadius: 4, elevation: 3 },
   avatar: { width: 50, height: 50, borderRadius: 25, backgroundColor: "#476EAE", justifyContent: "center", alignItems: "center", marginRight: 12 },
   avatarImage: { width: 50, height: 50, borderRadius: 25, marginRight: 12, borderWidth: 2, borderColor: "#476EAE" },
   avatarText: { color: "#fff", fontSize: 20, fontWeight: "700" },
@@ -520,8 +539,8 @@ const styles = StyleSheet.create({
   requestName: { fontSize: 16, fontWeight: "700", color: "#333" },
   requestUsername: { fontSize: 14, color: "#777", marginTop: 2 },
   requestActions: { flexDirection: "row", gap: 8 },
-  acceptButton: { width: 44, height: 44, borderRadius: 22, backgroundColor: "#4CAF50", justifyContent: "center", alignItems: "center" },
-  rejectButton: { width: 44, height: 44, borderRadius: 22, backgroundColor: "#f44336", justifyContent: "center", alignItems: "center" },
-  emptyRequests: { alignItems: "center", justifyContent: "center", paddingVertical: 80 },
+  acceptButton: { width: 44, height: 44, borderRadius: 22, backgroundColor: "#4CAF50", justifyContent: "center", alignItems: "center", shadowColor: "#000", shadowOpacity: 0.15, shadowOffset: { width: 0, height: 2 }, shadowRadius: 3, elevation: 2 },
+  rejectButton: { width: 44, height: 44, borderRadius: 22, backgroundColor: "#f44336", justifyContent: "center", alignItems: "center", shadowColor: "#000", shadowOpacity: 0.15, shadowOffset: { width: 0, height: 2 }, shadowRadius: 3, elevation: 2 },
+  emptyRequests: { marginTop: 60, alignItems: "center", paddingHorizontal: 40 },
   emptyRequestsText: { color: "#999", fontSize: 16, marginTop: 16, textAlign: "center" },
 });

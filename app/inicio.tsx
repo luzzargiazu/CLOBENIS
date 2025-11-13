@@ -1,7 +1,7 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { LinearGradient } from "expo-linear-gradient";
 import { useEffect, useRef, useState } from "react";
-import { doc, getDoc, onSnapshot } from 'firebase/firestore';
+import { doc, getDoc, onSnapshot, collection, query, where, orderBy, limit } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Ionicons } from "@expo/vector-icons";
 import {
@@ -41,6 +41,17 @@ interface Message {
   timestamp: Date;
 }
 
+interface ActivityItem {
+  id: string;
+  userId: string;
+  userName: string;
+  userPhoto?: string;
+  action: string;
+  actionType: 'message' | 'level' | 'match' | 'reservation';
+  timestamp: Date;
+  details?: any;
+}
+
 export default function InicioScreen() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState("inicio");
@@ -63,6 +74,9 @@ export default function InicioScreen() {
     loses: 0,
     photo: null,
   });
+  
+  const [friendsActivity, setFriendsActivity] = useState<ActivityItem[]>([]);
+  const [loadingActivity, setLoadingActivity] = useState(true);
   
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -165,6 +179,194 @@ export default function InicioScreen() {
     };
   }, []);
 
+  // Nuevo useEffect para cargar actividad de amigos
+  useEffect(() => {
+    const currentUserId = auth.currentUser?.uid;
+    if (!currentUserId) return;
+
+    let unsubscribes: (() => void)[] = [];
+
+    const loadFriendsActivity = async () => {
+      try {
+        setLoadingActivity(true);
+        
+        // Obtener lista de amigos
+        const userDoc = await getDoc(doc(db, "users", currentUserId));
+        const friendIds = userDoc.data()?.friends || [];
+
+        if (friendIds.length === 0) {
+          setFriendsActivity([]);
+          setLoadingActivity(false);
+          return;
+        }
+
+        const activities: ActivityItem[] = [];
+
+        // Escuchar cambios en los usuarios amigos (para detectar subidas de nivel)
+        friendIds.forEach((friendId: string) => {
+          const friendRef = doc(db, "users", friendId);
+          const unsubscribe = onSnapshot(friendRef, async (friendSnap) => {
+            if (friendSnap.exists()) {
+              const friendData = friendSnap.data();
+              const friendName = friendData.name || friendData.displayName || friendData.username || "Usuario";
+              const friendPhoto = friendData.photo || friendData.photoURL || "";
+              
+              // Verificar si hay actividad de nivel reciente
+              if (friendData.lastLevelUp) {
+                const levelUpDate = friendData.lastLevelUp.toDate();
+                const daysDiff = Math.floor((Date.now() - levelUpDate.getTime()) / (1000 * 60 * 60 * 24));
+                
+                if (daysDiff <= 7) { // Mostrar solo si fue en los últimos 7 días
+                  const existingIndex = activities.findIndex(a => a.id === `level-${friendId}`);
+                  const levelActivity: ActivityItem = {
+                    id: `level-${friendId}`,
+                    userId: friendId,
+                    userName: friendName,
+                    userPhoto: friendPhoto,
+                    action: `subió al nivel ${friendData.level}`,
+                    actionType: 'level',
+                    timestamp: levelUpDate,
+                    details: { level: friendData.level }
+                  };
+                  
+                  if (existingIndex >= 0) {
+                    activities[existingIndex] = levelActivity;
+                  } else {
+                    activities.push(levelActivity);
+                  }
+                }
+              }
+
+              // Verificar si ganó un partido recientemente
+              if (friendData.lastMatchWon) {
+                const matchDate = friendData.lastMatchWon.toDate();
+                const daysDiff = Math.floor((Date.now() - matchDate.getTime()) / (1000 * 60 * 60 * 24));
+                
+                if (daysDiff <= 7) {
+                  const existingIndex = activities.findIndex(a => a.id === `match-${friendId}`);
+                  const matchActivity: ActivityItem = {
+                    id: `match-${friendId}`,
+                    userId: friendId,
+                    userName: friendName,
+                    userPhoto: friendPhoto,
+                    action: "ganó un partido",
+                    actionType: 'match',
+                    timestamp: matchDate,
+                  };
+                  
+                  if (existingIndex >= 0) {
+                    activities[existingIndex] = matchActivity;
+                  } else {
+                    activities.push(matchActivity);
+                  }
+                }
+              }
+
+              // Ordenar por fecha y actualizar
+              activities.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+              setFriendsActivity([...activities]);
+            }
+          });
+          unsubscribes.push(unsubscribe);
+        });
+
+        // Escuchar mensajes recientes de chats con amigos
+        const chatsRef = collection(db, "chats");
+        const chatsQuery = query(
+          chatsRef,
+          where("participants", "array-contains", currentUserId)
+        );
+
+        const unsubscribeChats = onSnapshot(chatsQuery, async (chatsSnapshot) => {
+          for (const chatDoc of chatsSnapshot.docs) {
+            const chatData = chatDoc.data();
+            const participants = chatData.participants || [];
+            const friendId = participants.find((id: string) => id !== currentUserId);
+            
+            if (friendId && friendIds.includes(friendId)) {
+              // Obtener último mensaje
+              const messagesRef = collection(db, "chats", chatDoc.id, "messages");
+              const messagesQuery = query(messagesRef, orderBy("timestamp", "desc"), limit(1));
+              
+              const unsubscribeMessages = onSnapshot(messagesQuery, async (messagesSnapshot) => {
+                if (!messagesSnapshot.empty) {
+                  const lastMessage = messagesSnapshot.docs[0].data();
+                  
+                  // Solo mostrar si el mensaje no es del usuario actual
+                  if (lastMessage.senderId !== currentUserId) {
+                    const friendDoc = await getDoc(doc(db, "users", friendId));
+                    const friendData = friendDoc.data();
+                    const friendName = friendData?.name || friendData?.displayName || friendData?.username || "Usuario";
+                    const friendPhoto = friendData?.photo || friendData?.photoURL || "";
+                    
+                    const messageDate = lastMessage.timestamp?.toDate() || new Date();
+                    const daysDiff = Math.floor((Date.now() - messageDate.getTime()) / (1000 * 60 * 60 * 24));
+                    
+                    if (daysDiff <= 7) {
+                      const existingIndex = activities.findIndex(a => a.id === `message-${friendId}`);
+                      const messageActivity: ActivityItem = {
+                        id: `message-${friendId}`,
+                        userId: friendId,
+                        userName: friendName,
+                        userPhoto: friendPhoto,
+                        action: "te envió un mensaje",
+                        actionType: 'message',
+                        timestamp: messageDate,
+                        details: { preview: lastMessage.text?.substring(0, 50) || "..." }
+                      };
+                      
+                      if (existingIndex >= 0) {
+                        activities[existingIndex] = messageActivity;
+                      } else {
+                        activities.push(messageActivity);
+                      }
+                      
+                      activities.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+                      setFriendsActivity([...activities]);
+                    }
+                  }
+                }
+              });
+              unsubscribes.push(unsubscribeMessages);
+            }
+          }
+        });
+        unsubscribes.push(unsubscribeChats);
+
+        setLoadingActivity(false);
+      } catch (error) {
+        console.error("Error cargando actividad de amigos:", error);
+        setLoadingActivity(false);
+      }
+    };
+
+    loadFriendsActivity();
+
+    return () => {
+      unsubscribes.forEach(unsub => unsub());
+    };
+  }, []);
+
+  const getTimeAgo = (date: Date): string => {
+    const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
+    
+    if (seconds < 60) return "Hace unos segundos";
+    if (seconds < 3600) return `Hace ${Math.floor(seconds / 60)}m`;
+    if (seconds < 86400) return `Hace ${Math.floor(seconds / 3600)}h`;
+    if (seconds < 604800) return `Hace ${Math.floor(seconds / 86400)}d`;
+    return date.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
+  };
+
+  const getActivityIcon = (type: string): string => {
+    switch (type) {
+      case 'message': return '💬';
+      case 'level': return '⭐';
+      case 'match': return '🎾';
+      case 'reservation': return '📅';
+      default: return '📌';
+    }
+  };
+
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentNewsIndex((prev) => {
@@ -196,12 +398,6 @@ export default function InicioScreen() {
       }).start();
     }
   }, [showUserMenu]);
-
-  const feedItems = [
-    { id: 1, user: "Carlos M.", action: "ganó un partido", time: "Hace 2h" },
-    { id: 2, user: "Ana L.", action: "reservó una cancha", time: "Hace 4h" },
-    { id: 3, user: "Miguel R.", action: "subió de nivel", time: "Hace 6h" },
-  ];
 
   const callGeminiAPI = async (userMessage: string): Promise<string> => {
     if (!GEMINI_API_KEY) {
@@ -425,20 +621,54 @@ Responde de forma estructurada con bullets cuando sea necesario y mantén las re
 
             <Text style={styles.sectionTitle}>Actividad de amigos</Text>
             
-            {feedItems.map((item) => (
-              <View key={item.id} style={styles.feedItem}>
-                <View style={styles.feedAvatar}>
-                  <Text style={styles.avatarText}>
-                    {item.user.charAt(0)}
-                  </Text>
-                </View>
-                <View style={styles.feedContent}>
-                  <Text style={styles.feedUser}>{item.user}</Text>
-                  <Text style={styles.feedAction}>{item.action}</Text>
-                  <Text style={styles.feedTime}>{item.time}</Text>
-                </View>
+            {loadingActivity ? (
+              <View style={styles.feedItem}>
+                <ActivityIndicator size="small" color="#476EAE" />
+                <Text style={styles.feedAction}>Cargando actividad...</Text>
               </View>
-            ))}
+            ) : friendsActivity.length > 0 ? (
+              friendsActivity.slice(0, 10).map((item) => (
+                <View key={item.id} style={styles.feedItem}>
+                  {item.userPhoto ? (
+                    <Image 
+                      source={{ uri: item.userPhoto }} 
+                      style={styles.feedAvatarImage}
+                    />
+                  ) : (
+                    <View style={styles.feedAvatar}>
+                      <Text style={styles.avatarText}>
+                        {item.userName.charAt(0).toUpperCase()}
+                      </Text>
+                    </View>
+                  )}
+                  <View style={styles.feedContent}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <Text style={styles.feedUser}>{item.userName}</Text>
+                      <Text style={{ marginLeft: 6, fontSize: 16 }}>
+                        {getActivityIcon(item.actionType)}
+                      </Text>
+                    </View>
+                    <Text style={styles.feedAction}>{item.action}</Text>
+                    {item.details?.preview && (
+                      <Text style={styles.feedPreview} numberOfLines={1}>
+                        "{item.details.preview}"
+                      </Text>
+                    )}
+                    <Text style={styles.feedTime}>{getTimeAgo(item.timestamp)}</Text>
+                  </View>
+                </View>
+              ))
+            ) : (
+              <View style={styles.emptyActivity}>
+                <Text style={styles.emptyActivityIcon}>👥</Text>
+                <Text style={styles.emptyActivityText}>
+                  Aún no hay actividad de tus amigos
+                </Text>
+                <Text style={styles.emptyActivitySubtext}>
+                  Agrega amigos para ver su actividad aquí
+                </Text>
+              </View>
+            )}
           </ScrollView>
         );
       case "buscar":
@@ -566,7 +796,6 @@ Responde de forma estructurada con bullets cuando sea necesario y mantén las re
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* ✅ HEADER CORREGIDO */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <Image 
