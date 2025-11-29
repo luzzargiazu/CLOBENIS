@@ -594,9 +594,9 @@ export const styles = StyleSheet.create({
     borderColor: "#476EAE",
   },
   profileInitial: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 26,
+    height: 29,
+    borderRadius: 50,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 2,

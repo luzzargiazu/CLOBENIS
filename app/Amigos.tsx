@@ -164,15 +164,38 @@ export default function Amigos() {
   const searchUser = async (searchTerm: string) => {
     try {
       const usersRef = collection(db, "users");
-      const usernameQuery = query(usersRef, where("username", "==", searchTerm.toLowerCase()));
+      const searchTermLower = searchTerm.toLowerCase().trim();
+      
+      // Primera búsqueda: por username exacto (case-insensitive)
+      const usernameQuery = query(usersRef, where("username", "==", searchTermLower));
       let snapshot = await getDocs(usernameQuery);
-      if (snapshot.empty) {
-        const emailQuery = query(usersRef, where("email", "==", searchTerm.toLowerCase()));
-        snapshot = await getDocs(emailQuery);
-      }
+      
       if (!snapshot.empty) {
         return { id: snapshot.docs[0].id, ...snapshot.docs[0].data() };
       }
+      
+      // Segunda búsqueda: por email exacto (case-insensitive)
+      const emailQuery = query(usersRef, where("email", "==", searchTermLower));
+      snapshot = await getDocs(emailQuery);
+      
+      if (!snapshot.empty) {
+        return { id: snapshot.docs[0].id, ...snapshot.docs[0].data() };
+      }
+      
+      // Tercera búsqueda: buscar todos los usuarios y comparar manualmente
+      // (por si el username no está en minúsculas en la BD)
+      const allUsersSnapshot = await getDocs(usersRef);
+      
+      for (const docItem of allUsersSnapshot.docs) {
+        const userData = docItem.data();
+        const username = userData.username?.toLowerCase() || "";
+        const email = userData.email?.toLowerCase() || "";
+        
+        if (username === searchTermLower || email === searchTermLower) {
+          return { id: docItem.id, ...userData };
+        }
+      }
+      
       return null;
     } catch (error) {
       console.error("Error buscando usuario:", error);
@@ -401,7 +424,15 @@ export default function Amigos() {
         <View style={styles.modalOverlay}>
           <View style={styles.addModalContainer}>
             <Text style={styles.addModalTitle}>Agregar amigo</Text>
-            <TextInput placeholder="Nombre de usuario o correo" placeholderTextColor="#999" value={newFriend} onChangeText={setNewFriend} style={styles.addInput} autoCapitalize="none" autoCorrect={false} />
+            <TextInput 
+              placeholder="Nombre de usuario o correo" 
+              placeholderTextColor="#999" 
+              value={newFriend} 
+              onChangeText={setNewFriend} 
+              style={styles.addInput} 
+              autoCapitalize="none" 
+              autoCorrect={false} 
+            />
             <TouchableOpacity onPress={handleAddFriend} style={styles.addButton}>
               <LinearGradient colors={["#476EAE", "#48B3AF"]} style={styles.addGradient}>
                 <Text style={styles.addButtonText}>Enviar solicitud</Text>
